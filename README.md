@@ -26,8 +26,35 @@ Guests wear Bluetooth audio glasses paired to a small Raspberry Pi "puck".  A ce
 - **Web-based control**: Staff never touch menus — just upload tracks in the browser and click "GO"
 
 ## Getting Started
-1. **Master**:  Clone the repo on a Raspberry Pi 5 and run `install_server.sh`.  Reboot, then open http://willowcrestmanor.local:8080  
-2. **Clients**:  Flash Pi Zero images, clone repo on each, then `sudo install_client.sh <guest_id>`.  Reboot to auto-start.
+- **Master** (Windows or Linux): Clone the repo and follow the platform-specific instructions below.  
+- **Clients**: see `client/README.md`.  
+
+### Master (Windows PC)
+1. Install Python 3.11+ from https://python.org.  
+2. Open PowerShell and clone the repo:  
+   ```powershell
+   cd ~
+   git clone https://github.com/samseidegames/audio_sync_glasses.git
+   cd audio_sync_glasses/server
+   ```
+3. Create and activate a virtual environment:  
+   ```powershell
+   py -3 -m venv .venv
+   . .venv\Scripts\Activate.ps1
+   ```
+4. Install dependencies:  
+   ```powershell
+   pip install --upgrade pip
+   pip install -r requirements.txt
+   ```
+5. Ensure your system clock is synced (Windows Time service).  
+6. Run the master server:  
+   ```powershell
+   python master.py
+   ```
+7. Open a browser to http://willowcrestmanor.local:8080 (requires mDNS support) or http://<your_PC_hostname>:8080.  
+
+_(Raspberry Pi instructions removed; use Windows or follow previous Pi instructions in `server/README.md`.)_
 
 ---
 

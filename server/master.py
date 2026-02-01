@@ -1,11 +1,9 @@
 #!/usr/bin/env python3
 """
 Master controller for synchronized audio playback.
-Runs on Raspberry Pi 5. Uses WebSocket to send timestamped play/stop/fade commands to clients.
-Requires:
-  - Python 3.11+
-  - websockets 10.x
-  - linuxptp (ptp4l) configured externally as PTP grandmaster
+Runs on any host (Windows, Linux) with Python 3.11+.
+Uses WebSocket to send timestamped play/stop/fade commands to clients.
+Clock sync should be configured via system NTP on the host and clients.
 """
 import asyncio
 import json
@@ -16,9 +14,21 @@ from pathlib import Path
 import websockets
 from aiohttp import web
 import aiohttp
+import socket
 
 # CONFIGURATION
-HOST = '0.0.0.0'
+def _get_local_ip():
+    # Use a UDP socket to determine the outbound IP without sending data.
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        s.connect(("8.8.8.8", 80))
+        return s.getsockname()[0]
+    except Exception:
+        return "0.0.0.0"
+    finally:
+        s.close()
+
+HOST = _get_local_ip()
 PORT = 8765
 LEAD_TIME = 5.0        # seconds before playback
 PLAYLIST = {          # guest_id: track_filename
