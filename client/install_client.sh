@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # install_client.sh
-# Automates setup of Willowcrest Manor Audio Puck on Raspberry Pi Zero 2 W
+# Automates setup of Willowcrest Manor Audio Puck on Raspberry Pi Zero W v1.1 and Zero 2 W
 # Usage: sudo bash install_client.sh <guest_id>
 
 set -euo pipefail

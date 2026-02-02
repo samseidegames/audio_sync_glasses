@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
 Client audio puck for synchronized playback.
-Runs on Raspberry Pi Zero 2 W. Connects to master via WebSocket, schedules audio playback locally.
+Runs on Raspberry Pi Zero W v1.1 and Zero 2 W. Connects to master via WebSocket, schedules audio playback locally.
 Requires:
-  - Python 3.11+
+  - Python 3.7+
   - websockets 10.x
   - mpv installed with audio support
 """
@@ -19,7 +19,7 @@ import RPi.GPIO as GPIO  # type: ignore
 import re
 
 # CONFIGURATION
-SERVER_URI = 'ws://master.local:8765'  # change to Master's address
+SERVER_URI = 'ws://willowcrestmanor.local:8765'  # default server URI, can be overridden by --server argument
 AUDIO_DIR = Path(__file__).parent / 'audio'
 LOCAL_OFFSET = 0.0  # seconds (set via NTP/PTP externally)
 CONFIG_PATH = Path(__file__).parent / 'paired_device.txt'

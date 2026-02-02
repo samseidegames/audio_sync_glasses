@@ -13,7 +13,7 @@ Guests wear Bluetooth audio glasses paired to a small Raspberry Pi "puck".  A ce
   - `install_server.sh` – Automated installation & systemd setup on RPi 5
 
 - **/client**  
-  Raspberry Pi Zero 2 W puck client (Python, asyncio, mpv, bluetoothctl)  
+  Raspberry Pi Zero W v1.1 or Zero 2 W puck client (Python, asyncio, mpv, bluetoothctl)  
   - `puck.py` – Connects to Master, schedules local playback, handles auto-pairing  
   - `requirements.txt` – Python dependencies  
   - `install_client.sh` – Automated installation & systemd setup on Pi Zero

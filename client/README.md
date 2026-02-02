@@ -1,6 +1,6 @@
 # Willowcrest Manor Audio Puck - Client Setup
 
-Instructions for setting up each Raspberry Pi Zero 2 W as an audio puck.
+Instructions for setting up each Raspberry Pi Zero W v1.1 or Zero 2 W as an audio puck.
 
 ## Prerequisites
 - Raspberry Pi OS Lite installed on SD card
@@ -13,7 +13,7 @@ Instructions for setting up each Raspberry Pi Zero 2 W as an audio puck.
 
   network={
       ssid="iRouter"
-      psk="norman17"
+      psk="********"
       key_mgmt=WPA-PSK
   }
   ```
@@ -54,16 +54,16 @@ pip install -r requirements.txt
    ```
    Replace `XX:XX:XX:XX:XX:XX` with the MAC address of the Bluetooth audio glasses.
 
-On the Pi Zero 2 W (in bluetoothctl with discoverable/pairable on), put the glasses into their manufacturer pairing mode and run:
+On the Pi Zero W v1.1 or Zero 2 W (in bluetoothctl with discoverable/pairable on), put the glasses into their manufacturer pairing mode and run:
 ```bash
-# inside bluetoothctl on the Pi Zero 2 W
+# inside bluetoothctl on the Pi Zero W v1.1 or Zero 2 W
 scan on              # watch for "Device XX:XX:XX:XX:XX:XX <NAME>"
 # when you see the glasses' MAC, note it and run:
 scan off
 ```
 After you have the glasses' MAC, continue to step 3 to trust and connect.
 
-Note: the server (master) always runs on a Raspberry Pi 5. The server web UI (http://<RPI5_IP>:8080/) will show, for each Pi Zero 2 W puck:
+Note: the server (master) always runs on a Raspberry Pi 5. The server web UI (http://<RPI5_IP>:8080/) will show, for each Pi Zero W v1.1 or Zero 2 W puck:
 - whether the puck is connected to the server,
 - whether that puck currently has Bluetooth glasses connected, and
 - the glasses' remaining battery (if the glasses report battery and the client forwards it to the server).
