@@ -24,7 +24,7 @@ Instructions for setting up each Raspberry Pi Zero W v1.1 or Zero 2 W as an audi
 ## 1. System Update & Dependencies
 ```bash
 sudo apt update && sudo apt upgrade -y
-sudo apt install -y python3 python3-venv python3-pip mpv bluetooth bluez bluez-tools
+sudo apt install -y python3 python3-venv python3-pip mpv bluetooth bluez bluez-tools python3-rpi.gpio
 ```
 
 ## 2. Run Install Script
@@ -36,6 +36,7 @@ sudo bash install_client.sh <guest_id>
 ## 3. Bluetooth Pairing (One-time)
 1. Enable pairing mode on puck:
    ```bash
+   rfkill unblock all
    bluetoothctl
    discoverable on
    pairable on

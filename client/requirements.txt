@@ -1,1 +1,2 @@
 websockets>=10.4
+RPi.GPIO>=0.7
