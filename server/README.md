@@ -23,15 +23,10 @@ sudo apt update && sudo apt upgrade -y
 sudo apt install -y python3 python3-venv python3-pip git
 ```
 
-## 2. Clone & Install Python Packages
+## 2. Run Install Script
 ```bash
-cd ~
-git clone https://github.com/samseidegames/audio_sync_glasses.git
-cd audio_sync_glasses/server
-python3 -m venv .venv
-source .venv/bin/activate
-pip install --upgrade pip
-pip install -r requirements.txt
+cd ~/audio_sync_glasses/server
+sudo bash install_server.sh
 ```
 
 ## 3. Directory Structure

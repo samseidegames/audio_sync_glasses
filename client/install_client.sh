@@ -34,11 +34,12 @@ if ! grep -qF "$SSID" "$WPA_CONF"; then
   wpa_cli -i wlan0 reconfigure
 fi
 
-# 3. Clone repository (if not exists)
-REPO_DIR="/home/pi/audio_sync_glasses"
-if [ ! -d "$REPO_DIR" ]; then
-  git clone https://github.com/samseidegames/audio_sync_glasses.git "$REPO_DIR"
-fi
+# Determine script and repository directories
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_DIR="$(dirname "${SCRIPT_DIR}")"
+
+# 3. Repository location
+# Using existing repository at $REPO_DIR/client
 
 # 4. Python virtual environment
 cd "$REPO_DIR/client" || exit 1

@@ -27,15 +27,10 @@ sudo apt update && sudo apt upgrade -y
 sudo apt install -y python3 python3-venv python3-pip mpv bluetooth bluez bluez-tools
 ```
 
-## 2. Clone & Install Python Client
+## 2. Run Install Script
 ```bash
-cd ~
-git clone https://github.com/samseidegames/audio_sync_glasses.git
-cd audio_sync_glasses/client
-python3 -m venv .venv
-source .venv/bin/activate
-pip install --upgrade pip
-pip install -r requirements.txt
+cd ~/audio_sync_glasses/client
+sudo bash install_client.sh <guest_id>
 ```
 
 ## 3. Bluetooth Pairing (One-time)
