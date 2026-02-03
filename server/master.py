@@ -15,6 +15,7 @@ import websockets
 from aiohttp import web
 import aiohttp
 import socket
+from zeroconf import Zeroconf, ServiceInfo
 
 # CONFIGURATION
 def _get_local_ip():
@@ -28,7 +29,7 @@ def _get_local_ip():
     finally:
         s.close()
 
-HOST = _get_local_ip()
+HOST = '0.0.0.0'  # bind to all interfaces for mDNS access
 PORT = 8765
 LEAD_TIME = 5.0        # seconds before playback
 PLAYLIST = {          # guest_id: track_filename
@@ -90,7 +91,8 @@ def signal_handler(sig, frame):
 
 # HTTP and WS server on same port
 HTTP_PORT = 8080
-ALIAS = 'willowcrestmanor.local'
+ALIAS = 'willowcrestmanor'
+local_ip = _get_local_ip()  # Hostname without .local for mDNS service
 
 # directory for uploaded tracks
 AUDIO_DIR = Path(__file__).parent / 'audio'
@@ -186,9 +188,25 @@ app.router.add_post('/start', start_handler)
 app.router.add_get('/ws', ws_handler)
 
 if __name__ == '__main__':
-    print(f'Starting HTTP+WS server on port {HTTP_PORT}')
-    print(f'Access web UI at: http://{ALIAS}:{HTTP_PORT}')
-    web.run_app(app, host=HOST, port=HTTP_PORT)
+    # Register mDNS service for willowcrestmanor.local
+    print(f'Registering mDNS service as {ALIAS}.local on {local_ip}:{HTTP_PORT}')
+    zeroconf = Zeroconf()
+    info = ServiceInfo(
+        '_http._tcp.local.',
+        f'{ALIAS}._http._tcp.local.',
+        addresses=[socket.inet_aton(local_ip)],
+        port=HTTP_PORT,
+        properties={},
+        server=f'{ALIAS}.local.'
+    )
+    zeroconf.register_service(info)
+    try:
+        print(f'Starting HTTP+WS server on port {HTTP_PORT}')
+        print(f'Access web UI at: http://{ALIAS}.local:{HTTP_PORT}')
+        web.run_app(app, host=HOST, port=HTTP_PORT)
+    finally:
+        zeroconf.unregister_service(info)
+        zeroconf.close()
 
 # disable old console main
 if False:

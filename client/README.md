@@ -81,11 +81,11 @@ Note: the server (master) always runs on a Raspberry Pi 5. The server web UI (ht
 - `requirements.txt` – Python dependencies.
 
 ## 5. Time Sync Setup
-Use NTP/PTP to sync clock with master:
+Use PTP or an NTP daemon (openntpd) to sync clock with master:
 ```bash
-sudo apt install ntp
-sudo systemctl enable ntp
-sudo systemctl start ntp
+sudo apt install openntpd
+sudo systemctl enable openntpd
+sudo systemctl start openntpd
 ```
 
 ## 6. Running the Client

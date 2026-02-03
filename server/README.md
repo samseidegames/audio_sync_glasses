@@ -1,6 +1,6 @@
 # Willowcrest Manor Audio Master - Server Setup
 
-This guide covers installation and configuration of the master controller on a Raspberry Pi 5 (or equivalent Linux SBC).
+This guide covers installation and configuration of the master controller on a Raspberry Pi 5 (or equivalent Linux SBC) and Windows PCs.
 
 ## Prerequisites
 - Raspberry Pi OS (64-bit) or Ubuntu Server
@@ -10,7 +10,7 @@ This guide covers installation and configuration of the master controller on a R
     ```ini
     network={
         ssid="iRouter"
-        psk="norman17"
+        psk="********"
         key_mgmt=WPA-PSK
     }
     ```
@@ -85,3 +85,30 @@ sudo systemctl daemon-reload
 sudo systemctl enable audio-master
 sudo systemctl start audio-master
 ```
+
+## Windows PC Setup
+
+The master server can also be run on Windows PCs:
+
+**Prerequisites:**
+- Windows 10/11
+- Python 3.11+ installed and in PATH
+- (Optional) Git for cloning the repository
+- Ensure system clock is synced (Windows Time service)
+
+**Setup and Run:**
+```powershell
+cd ~
+git clone https://github.com/samseidegames/audio_sync_glasses.git
+cd audio_sync_glasses/server
+py -3 -m venv .venv
+# If running scripts is disabled, temporarily bypass the policy
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+. .venv\Scripts\Activate.ps1
+pip install --upgrade pip
+pip install -r requirements.txt
+python master.py
+```
+
+**Access the UI:**
+- HTTP UI: http://willowcrestmanor.local:8080 or http://<PC_HOSTNAME>:8080

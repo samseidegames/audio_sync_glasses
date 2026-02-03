@@ -24,7 +24,7 @@ echo
 
 # 1. System update and dependencies
 apt update && apt upgrade -y
-apt install -y python3 python3-venv python3-pip mpv bluetooth bluez bluez-tools wpa_supplicant ntp
+apt install -y python3 python3-venv python3-pip mpv bluetooth bluez bluez-tools wpa_supplicant openntpd
 
 # Configure Wi-Fi network if not present
 WPA_CONF='/etc/wpa_supplicant/wpa_supplicant.conf'
@@ -48,8 +48,8 @@ pip install --upgrade pip
 pip install --no-cache-dir -r requirements.txt
 
 # 5. Enable and start NTP
-systemctl enable ntp
-systemctl start ntp
+systemctl enable openntpd
+systemctl start openntpd
 
 # 6. Create systemd service for puck.py
 SERVICE_FILE='/etc/systemd/system/audio-puck.service'
