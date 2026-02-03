@@ -11,7 +11,7 @@ if [[ $EUID -ne 0 ]]; then
   exit 1
 fi
 
-if [ -z "$1" ]; then
+if [ $# -lt 1 ]; then
   echo "Usage: sudo bash install_client.sh <guest_id>"
   exit 1
 fi
