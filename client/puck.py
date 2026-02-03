@@ -191,11 +191,11 @@ def setup_button():
     GPIO.add_event_detect(BUTTON_PIN, GPIO.FALLING, callback=button_callback, bouncetime=300)
 
 def main():
+    global SERVER_URI
     parser = argparse.ArgumentParser(description='Audio Puck Client')
     parser.add_argument('--guest-id', required=True, help='Unique guest ID')
     parser.add_argument('--server', default=SERVER_URI, help='Master server URI')
     args = parser.parse_args()
-    global SERVER_URI
     SERVER_URI = args.server
 
     # ensure audio directory exists
