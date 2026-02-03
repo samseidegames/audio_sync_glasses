@@ -211,13 +211,16 @@ def main():
     # setup discovery button
     setup_button()
 
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(sync_clock())
-    try:
-        loop.run_until_complete(listen(args.guest_id))
-    except KeyboardInterrupt:
-        print("Client shutting down.")
-        sys.exit(0)
+    # Run sync and listener using asyncio.run to avoid deprecation warning
+    async def client_run():
+        await sync_clock()
+        try:
+            await listen(args.guest_id)
+        except KeyboardInterrupt:
+            print("Client shutting down.")
+            sys.exit(0)
+
+    asyncio.run(client_run())
 
 if __name__ == '__main__':
     main()
