@@ -41,6 +41,7 @@ PLAYLIST = {          # guest_id: track_filename
 
 clients = {}  # guest_id -> websocket connection
 client_addrs = {}  # guest_id -> client IP address
+client_paths = {}  # guest_id -> client install directory
 
 async def register(websocket):
     """Register new client by guest_id header"""
@@ -156,8 +157,9 @@ async def ws_handler(request):
     gid = data.get('guest_id')
     if gid:
         clients[gid] = ws
-        # record client IP address for SCP
+        # record client IP address and install path for SCP uploads
         client_addrs[gid] = request.remote
+        client_paths[gid] = data.get('install_dir', '')
     try:
         async for msg in ws:
             try:
@@ -174,6 +176,7 @@ async def ws_handler(request):
     finally:
         clients.pop(gid, None)
         client_addrs.pop(gid, None)
+        client_paths.pop(gid, None)
     return ws
 
 async def upload_handler(request):
@@ -192,11 +195,29 @@ async def upload_handler(request):
                     break
                 f.write(chunk)
         PLAYLIST[guest_id] = fname
-        # push file to client via SCP if connected
+        # push file to client via SCP if connected (using sshpass for password auth)
         ip = client_addrs.get(guest_id)
+        install_dir = client_paths.get(guest_id, '/home/pi/audio_sync_glasses/client')
         if ip:
-            client_path = f'pi@{ip}:/home/pi/audio_sync_glasses/client/audio/{fname}'
-            subprocess.run(['scp', str(path), client_path], check=False)
+            # ensure remote audio directory exists at client install path
+            password = 'raspberry'
+            mkdir_cmd = [
+                'sshpass', '-p', password, 'ssh',
+                '-o', 'StrictHostKeyChecking=no',
+                '-o', 'UserKnownHostsFile=/dev/null',
+                f'pi@{ip}',
+                f'mkdir -p {install_dir}/audio'
+            ]
+            subprocess.run(mkdir_cmd, check=False)
+            # copy file via scp
+            client_path = f'pi@{ip}:{install_dir}/audio/{fname}'
+            scp_cmd = [
+                'sshpass', '-p', password, 'scp',
+                '-o', 'StrictHostKeyChecking=no',
+                '-o', 'UserKnownHostsFile=/dev/null',
+                str(path), client_path
+            ]
+            subprocess.run(scp_cmd, check=False)
     return web.HTTPFound('/')
 
 async def start_handler(request):

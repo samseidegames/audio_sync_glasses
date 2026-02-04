@@ -132,9 +132,11 @@ async def sync_clock(samples: int = 5, timeout: float = 2.0, delay_between: floa
     print(f"Time sync complete: LOCAL_OFFSET set to {LOCAL_OFFSET:.6f} s (based on {len(offsets)} samples)")
 
 async def send_registration(ws, guest_id):
-    msg = {'guest_id': guest_id}
+    # include client installation directory for file uploads
+    install_dir = str(Path(__file__).parent)
+    msg = {'guest_id': guest_id, 'install_dir': install_dir}
     await ws.send(json.dumps(msg))
-    print(f"Registered with master as guest {guest_id}")
+    print(f"Registered with master as guest {guest_id} (install_dir={install_dir})")
 
 def download_track(track_file):
     """Download track from server HTTP audio endpoint"""

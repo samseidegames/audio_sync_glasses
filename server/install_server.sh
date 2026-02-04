@@ -11,7 +11,7 @@ echo
 
 # 1. System update and dependencies
 sudo apt update && sudo apt upgrade -y
-sudo apt install -y python3 python3-venv python3-pip git linuxptp wpa_supplicant
+sudo apt install -y python3 python3-venv python3-pip git linuxptp wpa_supplicant sshpass
 
 # 2. Wi-Fi configuration
 WPA_CONF=/etc/wpa_supplicant/wpa_supplicant.conf
