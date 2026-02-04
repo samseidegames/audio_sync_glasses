@@ -365,7 +365,7 @@ async def index(request):
       ruler.style.width = (totalPx + 120) + 'px';
 
       // Add zoom controls to the btn-group (below the timeline)
-      const btnGroup = form.querySelector('.btn-group');
+      let btnGroup = form.querySelector('.btn-group');
       const initialZoomMultiplier = (pps / 4).toFixed(2);
       const zoomControls = document.createElement('div');
       zoomControls.className = 'zoom-controls';
@@ -479,7 +479,7 @@ async def index(request):
       }
 
       // attach timeline to form
-      const btnGroup = form.querySelector('.btn-group');
+      btnGroup = form.querySelector('.btn-group');
       form.insertBefore(timelineContainer, btnGroup);
 
       // dragging (pointer events) for moving horizontally in single row
@@ -613,25 +613,39 @@ async def index(request):
           return resp.text().then(t => { throw new Error('Unexpected non-JSON response'); });
         })
         .then(data => {
+          console.log('Upload response:', data);
           if (data && data.status === 'ok' && Array.isArray(data.files)) {
+            console.log('Processing', data.files.length, 'files');
             // place each file in selection order at end of timeline
             let last = Array.from(lane.children).reduce((m,b)=>Math.max(m, parseFloat(b.dataset.start||0) + parseFloat(b.dataset.duration||0)), 0);
+            console.log('Current lane end position:', last);
             data.files.forEach(function(finfo) {
+              console.log('Adding file:', finfo.filename, 'duration:', finfo.duration);
               const block = createBlock({type:'track', track:finfo.filename, duration:finfo.duration || 0});
+              console.log('Block created:', block);
               placeBlock(block, last || 0);
+              console.log('Block placed at:', last);
               last = Math.max(last, parseFloat(block.dataset.start||0) + parseFloat(block.dataset.duration||0));
+              console.log('New lane end position:', last);
             });
+            console.log('Reflowing blocks');
             // ensure blocks snap adjacent after insertion
             reflow();
+            console.log('Saving playlist');
             // auto-save updated timeline to server so server playlist reflects the uploaded tracks immediately
             savePlaylist();
+            console.log('Upload complete');
           } else if (data && data.status === 'ok' && data.filename) {
+            console.log('Single file backward-compat mode');
             // backward-compat single-file response
             const last = Array.from(lane.children).reduce((m,b)=>Math.max(m, parseFloat(b.dataset.start||0) + parseFloat(b.dataset.duration||0)), 0);
             const block = createBlock({type:'track', track:data.filename, duration:data.duration || 0});
             placeBlock(block, last || 0);
             reflow(); savePlaylist();
-          } else alert('Upload failed');
+          } else {
+            console.error('Upload response invalid:', data);
+            alert('Upload failed');
+          }
         })
         .catch((err) => alert('Upload error: ' + (err && err.message ? err.message : 'Network error')))
         .finally(() => { this.value = ''; });

@@ -286,23 +286,25 @@ async def handle_command(cmd):
     elif ctype == 'PLAYLIST_COMPLETE':
         ts = float(cmd.get('timestamp', 0))
         async def log_playlist_complete(at_ts):
+            # Calculate delay until this timestamp is reached in server time
             now = time.time() + LOCAL_OFFSET
             delay = at_ts - now
-            # wait for all scheduled playback tasks to complete
-            while scheduled_queue:
-                await asyncio.sleep(0.1)
-            # Now all playback is done; log playlist complete
+            # Wait until the playlist completion time arrives
+            if delay > 0:
+                await asyncio.sleep(delay)
+            # Now log at the actual completion time
             print(f"[{format_time(at_ts)}] Playlist Complete")
         asyncio.create_task(log_playlist_complete(ts))
     elif ctype == 'SHOW_COMPLETE':
         ts = float(cmd.get('timestamp', 0))
         async def log_show_complete(at_ts):
+            # Calculate delay until this timestamp is reached in server time
             now = time.time() + LOCAL_OFFSET
             delay = at_ts - now
-            # wait for all scheduled playback tasks to complete
-            while scheduled_queue:
-                await asyncio.sleep(0.1)
-            # Now all playback is done; log show complete
+            # Wait until the show completion time arrives
+            if delay > 0:
+                await asyncio.sleep(delay)
+            # Now log at the actual completion time
             print(f"[{format_time(at_ts)}] Show Complete")
         asyncio.create_task(log_show_complete(ts))
     else:
