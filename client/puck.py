@@ -153,6 +153,8 @@ def download_track(track_file):
         print(f"Failed to download {track_file}: {e}")
 
 async def schedule_play(track_file, timestamp, offset):
+    # Refresh clock sync before scheduling playback to reduce drift
+    await sync_clock(samples=3, timeout=1.0, delay_between=0.01)
     now = time.time() + LOCAL_OFFSET
     delay = timestamp - now
     if delay < 0:
