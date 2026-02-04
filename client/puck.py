@@ -134,7 +134,7 @@ async def sync_clock(samples: int = 5, timeout: float = 2.0, delay_between: floa
 async def send_registration(ws, guest_id):
     # include client installation directory for file uploads
     install_dir = str(Path(__file__).parent)
-    msg = {'guest_id': guest_id, 'install_dir': install_dir}
+    msg = {'guest_id': guest_id, 'install_dir': install_dir, 'local_offset': LOCAL_OFFSET}
     await ws.send(json.dumps(msg))
     print(f"Registered with master as guest {guest_id} (install_dir={install_dir})")
 

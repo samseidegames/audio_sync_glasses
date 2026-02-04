@@ -35,7 +35,7 @@ def _get_local_ip():
 
 HOST = '0.0.0.0'  # bind to all interfaces for mDNS access
 PORT = 8765
-LEAD_TIME = 5.0        # seconds before playback
+LEAD_TIME = 10.0       # seconds before playback (increased to ensure consistent delivery)
 PLAYLIST = {          # guest_id: track_filename
     '1': 'track1.mp3',
     '2': 'track2.mp3',
@@ -45,6 +45,7 @@ PLAYLIST = {          # guest_id: track_filename
 clients = {}  # guest_id -> websocket connection
 client_addrs = {}  # guest_id -> client IP address
 client_paths = {}  # guest_id -> client install directory
+client_offsets = {}  # guest_id -> client LOCAL_OFFSET
 
 async def register(websocket):
     """Register new client by guest_id header"""
@@ -73,14 +74,18 @@ async def handler(websocket, path):
         await unregister(websocket)
 
 async def start_show():
-    # compute absolute start time
-    t0 = time.time() + LEAD_TIME
-    print(f"Scheduling PLAY at {t0} (+{LEAD_TIME}s)")
-    # send play commands
-    for guest_id, track in PLAYLIST.items():
-        ws = clients.get(guest_id)
-        if not ws:
-            print(f"Warning: guest {guest_id} not connected")
+    # compute per-client clock offsets
+    offsets = list(client_offsets.values()) or [0.0]
+    max_offset = max(offsets)
+    # compute absolute start time with slack for worst offset
+    t0 = time.time() + LEAD_TIME + max_offset
+    print(f"Scheduling PLAY at {t0} (+{LEAD_TIME}s + slack {max_offset}s)")
+    # send play commands to all connected clients
+    for guest_id, ws in clients.items():
+        # determine track name supporting padded or unpadded IDs
+        track = PLAYLIST.get(guest_id) or PLAYLIST.get(str(int(guest_id)))
+        if not track:
+            print(f"Warning: guest {guest_id} has no assigned track")
             continue
         cmd = {
             'type': 'PLAY',
@@ -88,8 +93,12 @@ async def start_show():
             'timestamp': t0,
             'offset': 0.0
         }
-        # send JSON via aiohttp WebSocketResponse
-        await ws.send_json(cmd)
+        # schedule playback on client
+        try:
+            await ws.send_json(cmd)
+            print(f"Dispatched PLAY to guest {guest_id}")
+        except Exception as e:
+            print(f"Failed to send PLAY to guest {guest_id}: {e}")
     print("PLAY commands dispatched.")
 
 def signal_handler(sig, frame):
@@ -155,18 +164,20 @@ async def ws_handler(request):
     # WebSocket handler: support time sync and client registration
     ws = web.WebSocketResponse()
     await ws.prepare(request)
-    # register: expect first TEXT message with registration and install_dir
-    msg = await ws.receive()
-    if msg.type != WSMsgType.TEXT:
+    # register: expect first TEXT message with registration, install_dir, and offset
+    try:
+        text = await ws.receive_str()
+    except Exception:
         await ws.close()
         return ws
-    data = json.loads(msg.data)
+    data = json.loads(text)
     gid = data.get('guest_id')
     if gid:
         clients[gid] = ws
-        # record client IP address and install path for SCP uploads
         client_addrs[gid] = request.remote
         client_paths[gid] = data.get('install_dir', '')
+        client_offsets[gid] = float(data.get('local_offset', 0.0))
+        print(f'Registered guest {gid} at {request.remote} with offset={client_offsets[gid]}s')
     try:
         async for msg in ws:
             # skip non-text messages
@@ -187,6 +198,7 @@ async def ws_handler(request):
         clients.pop(gid, None)
         client_addrs.pop(gid, None)
         client_paths.pop(gid, None)
+        client_offsets.pop(gid, None)
     return ws
 
 async def upload_handler(request):
