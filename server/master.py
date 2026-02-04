@@ -22,6 +22,10 @@ import subprocess
 import os
 import paramiko
 from mutagen.mp3 import MP3
+try:
+    from mutagen.wave import WAVE
+except ImportError:
+    WAVE = None
 
 def format_time(timestamp):
     """Convert Unix timestamp to human-readable clock format."""
@@ -56,13 +60,21 @@ PLAYLISTS = {}
 track_durations = {}  # filename -> duration in seconds
 
 def get_track_duration(filename):
-    """Get the duration of an MP3 track in seconds."""
+    """Get the duration of a WAV audio track in seconds."""
     if filename in track_durations:
         return track_durations[filename]
     try:
         path = AUDIO_DIR / filename
-        audio = MP3(str(path))
-        duration = audio.info.length
+        # All files are now WAV (converted on upload)
+        if WAVE and filename.lower().endswith('.wav'):
+            audio = WAVE(str(path))
+            duration = audio.info.length
+        else:
+            # Fallback to ffprobe
+            result = subprocess.run(['ffprobe', '-v', 'error', '-show_entries', 'format=duration', 
+                                   '-of', 'default=noprint_wrappers=1:nokey=1', str(path)],
+                                  capture_output=True, text=True, timeout=5)
+            duration = float(result.stdout.strip())
         track_durations[filename] = duration
         return duration
     except Exception as e:
@@ -768,19 +780,49 @@ async def upload_handler(request):
         # use original filename, replace spaces with underscores
         original_fname = field.filename or 'track'
         safe_fname = original_fname.replace(' ', '_')
-        path = AUDIO_DIR / safe_fname
-        # save file locally
-        with open(path, 'wb') as f:
+        # If MP3, convert to WAV; otherwise keep as is
+        if safe_fname.lower().endswith('.mp3'):
+            wav_fname = safe_fname.rsplit('.', 1)[0] + '.wav'
+        else:
+            wav_fname = safe_fname
+        
+        temp_path = AUDIO_DIR / safe_fname
+        final_path = AUDIO_DIR / wav_fname
+        
+        # Save uploaded file
+        with open(temp_path, 'wb') as f:
             while True:
                 chunk = await field.read_chunk()
                 if not chunk:
                     break
                 f.write(chunk)
+        
         print(f"[{format_time(time.time())}] Uploaded {safe_fname} for guest {guest_id}")
+        
+        # Convert MP3 to WAV if necessary
+        if safe_fname.lower().endswith('.mp3'):
+            try:
+                print(f"[{format_time(time.time())}] Converting {safe_fname} to WAV...")
+                # Use ffmpeg to convert MP3 to WAV
+                result = subprocess.run(['ffmpeg', '-i', str(temp_path), '-acodec', 'pcm_s16le', '-ar', '44100', 
+                                       str(final_path), '-y'], capture_output=True, timeout=60)
+                if result.returncode == 0:
+                    temp_path.unlink()  # Delete original MP3
+                    print(f"[{format_time(time.time())}] Converted to {wav_fname}")
+                else:
+                    print(f"[{format_time(time.time())}] Conversion failed, keeping MP3")
+                    final_path = temp_path
+                    wav_fname = safe_fname
+            except Exception as e:
+                print(f"[{format_time(time.time())}] Conversion error: {e}, keeping original")
+                final_path = temp_path
+                wav_fname = safe_fname
+        
         # add to guest playlist (track row followed by delay row)
-        PLAYLISTS.setdefault(guest_id, []).append({'type': 'track', 'track': safe_fname})
+        PLAYLISTS.setdefault(guest_id, []).append({'type': 'track', 'track': wav_fname})
         PLAYLISTS[guest_id].append({'type': 'delay', 'seconds': 0.0})
-        files_added.append({'filename': safe_fname, 'duration': get_track_duration(safe_fname)})
+        files_added.append({'filename': wav_fname, 'duration': get_track_duration(wav_fname)})
+        
         # push file to client via SFTP if connected
         ip = client_addrs.get(guest_id)
         install_dir = client_paths.get(guest_id, '')
@@ -796,8 +838,8 @@ async def upload_handler(request):
                     sftp.mkdir(audio_dir)
                 except IOError:
                     pass
-                remote_path = os.path.join(audio_dir, safe_fname)
-                sftp.put(str(path), remote_path)
+                remote_path = os.path.join(audio_dir, wav_fname)
+                sftp.put(str(final_path), remote_path)
                 sftp.close()
                 ssh.close()
                 print(f"[{format_time(time.time())}] Pushed file to client {guest_id} at {ip}:{remote_path}")

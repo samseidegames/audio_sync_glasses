@@ -20,11 +20,13 @@ import RPi.GPIO as GPIO  # type: ignore
 import re
 import urllib.request
 
-# Try to import mutagen for duration detection; fall back gracefully
+# Try to import mutagen for WAV duration detection; fall back gracefully
 try:
-    from mutagen.mp3 import MP3
+    from mutagen.wave import WAVE
 except Exception:
+    WAVE = None
     MP3 = None
+    WAVE = None
 
 
 def format_time(timestamp):
@@ -159,18 +161,28 @@ async def send_registration(ws, guest_id):
     print(f"Registered with master as guest {guest_id} (install_dir={install_dir})")
 
 def get_track_duration(track_file):
-    """Return duration in seconds for an MP3, 0.0 if unknown."""
+    """Return duration in seconds for a WAV audio file, 0.0 if unknown."""
     path = AUDIO_DIR / track_file
     if not path.exists():
-        # attempt to download if missing
         download_track(track_file)
-    if not path.exists() or MP3 is None:
-        if MP3 is None:
+    if not path.exists():
+        if WAVE is None:
             print("Warning: mutagen not available; cannot determine track duration.")
         return 0.0
     try:
-        audio = MP3(str(path))
-        return audio.info.length
+        # All files are now WAV (converted on upload server)
+        if track_file.lower().endswith('.wav') and WAVE:
+            audio = WAVE(str(path))
+            return audio.info.length
+        else:
+            # Fallback to ffprobe
+            try:
+                result = subprocess.run(['ffprobe', '-v', 'error', '-show_entries', 'format=duration',
+                                       '-of', 'default=noprint_wrappers=1:nokey=1', str(path)],
+                                      capture_output=True, text=True, timeout=5)
+                return float(result.stdout.strip())
+            except Exception:
+                return 0.0
     except Exception as e:
         print(f"Warning: failed to read duration for {track_file}: {e}")
         return 0.0
@@ -210,16 +222,44 @@ async def schedule_play(track_file, timestamp, offset):
         if not path.exists():
             print(f"[{format_time(time.time())}] Error: track {path} not found.")
             return
-    cmd = [
-        'mpv', '--no-video', '--really-quiet', '--audio-device=pulse',
-        '--cache=no', f'--start={offset}', str(path)
-    ]
-    print(f"[{format_time(time.time())}] Starting playback: {track_file} (offset {offset}s)")
+    # Use mpg123 for lightweight WAV playback with direct ALSA output
+    # Format: mpg123 -f <output_buffer_size> -a <alsa_device> [--offset <ms>] <file>
+    # For offset in seconds, convert to milliseconds for mpg123's --seek option
+    seek_ms = int(offset * 1000) if offset > 0 else 0
+    
+    # Try mpg123 first (lightweight, optimized for pi zero)
+    try:
+        if seek_ms > 0:
+            cmd = [
+                'nice', '-n', '-10',  # High priority
+                'mpg123', '-f', '2048', '-a', 'default', '--seek', str(seek_ms), str(path)
+            ]
+        else:
+            cmd = [
+                'nice', '-n', '-10',  # High priority
+                'mpg123', '-f', '2048', '-a', 'default', str(path)
+            ]
+        print(f"[{format_time(time.time())}] Starting playback (mpg123): {track_file} (offset {offset}s)")
+    except Exception as e:
+        # Fallback to mpv if mpg123 unavailable
+        print(f"[{format_time(time.time())}] mpg123 unavailable ({e}), falling back to mpv")
+        cmd = [
+            'mpv', '--no-video', '--really-quiet', '--audio-device=default',
+            '--cache=no', f'--start={offset}', str(path)
+        ]
+        print(f"[{format_time(time.time())}] Starting playback (mpv): {track_file} (offset {offset}s)")
+    
     # start actual playback and track active plays
     start_actual = time.time() + LOCAL_OFFSET
     global active_plays
     active_plays += 1
-    proc = subprocess.Popen(cmd)
+    try:
+        proc = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    except Exception as e:
+        print(f"[{format_time(time.time())}] Error starting playback: {e}")
+        active_plays -= 1
+        return
+    
     # remove this play from scheduled_queue (match by track and timestamp) and capture duration from server if present
     duration = None
     try:
