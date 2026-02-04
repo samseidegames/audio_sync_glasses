@@ -242,16 +242,24 @@ async def handle_command(cmd):
     ctype = cmd.get('type')
     if ctype == 'PLAY':
         track = cmd['track']
-        timestamp = cmd['timestamp']
-        offset = cmd.get('offset', 0.0)
+        timestamp = float(cmd['timestamp'])
+        offset = float(cmd.get('offset', 0.0))
+        duration = float(cmd.get('duration', 0.0))
+        # compute expected finish for this item
+        expected_finish = timestamp + duration
         # Log scheduled gap vs previous expected end
         global scheduled_queue, last_expected_end_time
         if last_expected_end_time is not None and timestamp > last_expected_end_time + 0.001:
             gap = timestamp - last_expected_end_time
             print(f"[{format_time(time.time())}] Scheduled delay of {gap:.1f}s before {track}")
-        # add to scheduled queue (keep sorted)
-        scheduled_queue.append({'track': track, 'timestamp': timestamp, 'offset': offset})
+        # add to scheduled queue (keep sorted) and include duration
+        scheduled_queue.append({'track': track, 'timestamp': timestamp, 'offset': offset, 'duration': duration})
         scheduled_queue.sort(key=lambda x: x['timestamp'])
+        # update last_expected_end_time to the max of known scheduled finishes
+        if last_expected_end_time is None:
+            last_expected_end_time = expected_finish
+        else:
+            last_expected_end_time = max(last_expected_end_time, expected_finish)
         asyncio.create_task(schedule_play(track, timestamp, offset))
     else:
         print(f"Unhandled command type: {ctype}")
