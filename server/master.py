@@ -267,8 +267,8 @@ async def index(request):
             '.btn-upload:hover { background:#a371f7; }'
             '.btn-danger { background:#da3633; color:#fff; }'
             '.btn-danger:hover { background:#f85149; }'
-            '.btn-go { background:#da3633; color:#fff; font-size:1.2em; padding:12px 40px; }'
-            '.btn-go:hover { background:#f85149; }'
+            '.btn-go { background:#238636; color:#fff; font-size:1.2em; padding:12px 40px; }'
+            '.btn-go:hover { background:#2ea043; }'
             '.btn-group { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:12px; }'
             '.track-row { background:#1c3a2e; border:1px solid #238636 !important; }'
             '.delay-row { background:#2d2a1c; border:1px solid #9e6a03 !important; }'
@@ -284,8 +284,16 @@ async def index(request):
             '.zoom-controls { position:absolute; right:12px; top:6px; display:flex; gap:6px; align-items:center; display:none; }'
             '.zoom-controls .btn { padding:6px 10px; font-size:12px; }'
             '.zoom-level { color:#8b949e; font-size:12px; padding:4px 8px; }'
+            '.upload-overlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:1000; justify-content:center; align-items:center; }'
+            '.upload-overlay.active { display:flex; }'
+            '.upload-message { background:#161b22; border:2px solid #58a6ff; border-radius:12px; padding:40px; text-align:center; box-shadow:0 8px 32px rgba(0,0,0,0.5); }'
+            '.upload-message h2 { color:#58a6ff; margin:0 0 15px 0; font-size:1.5em; }'
+            '.upload-message p { color:#c9d1d9; margin:0; font-size:1.1em; }'
+            '.spinner { display:inline-block; width:40px; height:40px; border:4px solid #30363d; border-top:4px solid #58a6ff; border-radius:50%; animation:spin 1s linear infinite; margin-bottom:15px; }'
+            '@keyframes spin { 0% { transform:rotate(0deg); } 100% { transform:rotate(360deg); } }'
             '</style>'
             '<body>'
+            '<div class="upload-overlay" id="uploadOverlay"><div class="upload-message"><div class="spinner"></div><h2>Please Wait</h2><p>Uploading and processing file...</p></div></div>'
             '<div class="start-button-wrapper"><form method="POST" action="/start"><button type="submit" class="btn btn-go">▶️ GO</button></form></div>'
             '<div class="container">')
     html += '<div class="header-wrapper">'
@@ -635,6 +643,8 @@ async def index(request):
         const formData = new FormData();
         formData.append('guest_id', guestId);
         files.forEach(f => formData.append('file', f));
+        // Show the upload overlay
+        document.getElementById('uploadOverlay').classList.add('active');
         fetch('/upload', { method: 'POST', body: formData, headers: { 'Accept': 'application/json' } })
         .then(resp => {
           if (!resp.ok) throw new Error('Upload failed (HTTP ' + resp.status + ')');
@@ -665,6 +675,7 @@ async def index(request):
             // auto-save updated timeline to server so server playlist reflects the uploaded tracks immediately
             savePlaylist();
             console.log('Upload complete');
+            document.getElementById('uploadOverlay').classList.remove('active');
           } else if (data && data.status === 'ok' && data.filename) {
             console.log('Single file backward-compat mode');
             // backward-compat single-file response
@@ -672,13 +683,15 @@ async def index(request):
             const block = createBlock({type:'track', track:data.filename, duration:data.duration || 0});
             placeBlock(block, last || 0);
             reflow(); savePlaylist();
+            document.getElementById('uploadOverlay').classList.remove('active');
           } else {
             console.error('Upload response invalid:', data);
             alert('Upload failed');
+            document.getElementById('uploadOverlay').classList.remove('active');
           }
         })
-        .catch((err) => alert('Upload error: ' + (err && err.message ? err.message : 'Network error')))
-        .finally(() => { this.value = ''; });
+        .catch((err) => { alert('Upload error: ' + (err && err.message ? err.message : 'Network error')); document.getElementById('uploadOverlay').classList.remove('active'); })
+        .finally(() => { this.value = ''; document.getElementById('uploadOverlay').classList.remove('active'); });
       });
 
       function savePlaylist() {
