@@ -357,7 +357,8 @@ async def index(request):
 
       const timelineContainer = document.createElement('div');
       timelineContainer.className = 'timeline-container';
-      timelineContainer.style.cssText = 'background: linear-gradient(90deg, rgba(255,255,255,0.01), rgba(255,255,255,0.01)); padding:8px; border-radius:6px;';
+      // position relative so absolute-positioned controls (zoom) are placed per-timeline
+      timelineContainer.style.cssText = 'position:relative; background: linear-gradient(90deg, rgba(255,255,255,0.01), rgba(255,255,255,0.01)); padding:8px; border-radius:6px;';
 
       // ruler
       let ruler = makeRuler(Math.ceil(totalSeconds+1), pps);
@@ -384,6 +385,8 @@ async def index(request):
         ruler.style.width = (totalPx + 120) + 'px';
         // insert ruler at top of container (zoomControls is before it)
         timelineContainer.insertBefore(ruler, timelineContainer.querySelector('.timeline-lane'));
+        // update lane min width so container scroll behavior remains consistent
+        lane.style.minWidth = (Math.max(400, Math.round(totalSeconds * pps)) + 60) + 'px';
         // update blocks width/left
         Array.from(lane.querySelectorAll('.timeline-item')).forEach(function(b) {
           const start = parseFloat(b.dataset.start || 0);
@@ -398,6 +401,15 @@ async def index(request):
       // wire zoom buttons
       zoomControls.querySelector('.zoom-in').addEventListener('click', function(){ updateScale(Math.round(pps * 1.25)); });
       zoomControls.querySelector('.zoom-out').addEventListener('click', function(){ updateScale(Math.round(pps / 1.25)); });
+
+      // allow wheel to zoom when hovering this timeline (per-timeline independent zoom)
+      timelineContainer.addEventListener('wheel', function(e) {
+        // only when Ctrl is pressed or when user mouses over the zoomControls area (prevent accidental scroll zoom)
+        // Accept zoom on wheel over the timeline for convenience
+        e.preventDefault();
+        if (e.deltaY < 0) updateScale(Math.round(pps * 1.15));
+        else updateScale(Math.round(pps / 1.15));
+      }, { passive: false });
 
       // single-row timeline (left-to-right) that snaps blocks together
       const lane = document.createElement('div');
