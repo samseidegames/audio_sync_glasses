@@ -211,8 +211,7 @@ async def schedule_play(track_file, timestamp, offset):
             return
     cmd = [
         'mpv', '--no-video', '--really-quiet', '--audio-device=pulse',
-        '--cache=yes', '--demuxer-max-bytes=500M', '--audio-buffer=200',
-        f'--start={offset}', str(path)
+        '--cache=no', f'--start={offset}', str(path)
     ]
     print(f"[{format_time(time.time())}] Starting playback: {track_file} (offset {offset}s)")
     proc = subprocess.Popen(cmd)
