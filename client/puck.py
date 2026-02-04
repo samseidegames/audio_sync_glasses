@@ -39,6 +39,7 @@ CONFIG_PATH = Path(__file__).parent / 'paired_device.txt'
 # scheduler state for logging delays
 scheduled_queue = []  # list of dicts {'track','timestamp','offset'} sorted by timestamp
 last_expected_end_time = None  # server-timestamp of when last scheduled track is expected to finish
+active_plays = 0  # count of currently playing processes
 
 BUTTON_PIN = 17  # BCM pin number for discovery button
 
@@ -214,6 +215,10 @@ async def schedule_play(track_file, timestamp, offset):
         '--cache=no', f'--start={offset}', str(path)
     ]
     print(f"[{format_time(time.time())}] Starting playback: {track_file} (offset {offset}s)")
+    # start actual playback and track active plays
+    start_actual = time.time() + LOCAL_OFFSET
+    global active_plays
+    active_plays += 1
     proc = subprocess.Popen(cmd)
     # remove this play from scheduled_queue (match by track and timestamp) and capture duration from server if present
     duration = None
@@ -225,31 +230,31 @@ async def schedule_play(track_file, timestamp, offset):
                 break
     except Exception:
         pass
+
     # wait for playback process to complete
     await asyncio.get_running_loop().run_in_executor(None, proc.wait)
-    # compute remaining duration considering offset; prefer server-provided duration
+    end_actual = time.time() + LOCAL_OFFSET
+    # compute duration (fallback if server didn't provide)
     if duration is None or duration == 0:
         duration = get_track_duration(track_file)
-    remaining = max(0.0, duration - offset)
-    finished_time = timestamp + remaining
     # Format durations as HH:MM:SS
     dur_hours = int(duration // 3600)
     dur_mins = int((duration % 3600) // 60)
     dur_secs = duration % 60
-    print(f"[{format_time(finished_time)}] Playback finished for {track_file} (duration: {dur_hours:02d}:{dur_mins:02d}:{dur_secs:06.3f}, offset: {offset:.1f}s)")
-    last_expected_end_time = finished_time
-    # if there is a next scheduled play, compute delay and report
+    print(f"[{format_time(end_actual)}] Playback finished for {track_file} (duration: {dur_hours:02d}:{dur_mins:02d}:{dur_secs:06.3f}, offset: {offset:.1f}s)")
+    last_expected_end_time = end_actual
+    active_plays -= 1
+    # if there is a next scheduled play, compute delay and report relative to actual end
     next_item = None
     for s in scheduled_queue:
-        if s.get('timestamp', 0) >= finished_time - 0.0001:
+        if s.get('timestamp', 0) >= end_actual - 0.0001:
             next_item = s
             break
     if next_item:
-        delay_seconds = next_item.get('timestamp', 0) - finished_time
+        delay_seconds = next_item.get('timestamp', 0) - end_actual
         if delay_seconds > 0:
-            print(f"[{format_time(finished_time)}] Delay: {delay_seconds:.1f}s before next track ({next_item.get('track')})")
+            print(f"[{format_time(end_actual)}] Delay: {delay_seconds:.1f}s before next track ({next_item.get('track')})")
     else:
-        # no known next item — nothing to log
         pass
 
 async def handle_command(cmd):
@@ -286,26 +291,27 @@ async def handle_command(cmd):
     elif ctype == 'PLAYLIST_COMPLETE':
         ts = float(cmd.get('timestamp', 0))
         async def log_playlist_complete(at_ts):
-            # Calculate delay until this timestamp is reached in server time
-            now = time.time() + LOCAL_OFFSET
-            delay = at_ts - now
-            # Wait until the playlist completion time arrives
-            if delay > 0:
-                await asyncio.sleep(delay)
-            # Now log at the actual completion time
-            print(f"[{format_time(at_ts)}] Playlist Complete")
+            # Wait until server time reaches the declared playlist end AND no active plays remain
+            while True:
+                now = time.time() + LOCAL_OFFSET
+                if now >= at_ts and active_plays == 0 and not scheduled_queue:
+                    break
+                await asyncio.sleep(0.1)
+            # Log at the observed completion time
+            observed = time.time() + LOCAL_OFFSET
+            print(f"[{format_time(observed)}] Playlist Complete")
         asyncio.create_task(log_playlist_complete(ts))
     elif ctype == 'SHOW_COMPLETE':
         ts = float(cmd.get('timestamp', 0))
         async def log_show_complete(at_ts):
-            # Calculate delay until this timestamp is reached in server time
-            now = time.time() + LOCAL_OFFSET
-            delay = at_ts - now
-            # Wait until the show completion time arrives
-            if delay > 0:
-                await asyncio.sleep(delay)
-            # Now log at the actual completion time
-            print(f"[{format_time(at_ts)}] Show Complete")
+            # Wait until server time reaches the declared show end AND no active plays remain
+            while True:
+                now = time.time() + LOCAL_OFFSET
+                if now >= at_ts and active_plays == 0 and not scheduled_queue:
+                    break
+                await asyncio.sleep(0.1)
+            observed = time.time() + LOCAL_OFFSET
+            print(f"[{format_time(observed)}] Show Complete")
         asyncio.create_task(log_show_complete(ts))
     else:
         print(f"Unhandled command type: {ctype}")
