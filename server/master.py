@@ -206,8 +206,15 @@ async def index(request):
     for guest in guests:
         # display current playlist (new format: list of {type, track/seconds})
         plist = PLAYLISTS.get(guest, [])
-        # Convert to JSON for JavaScript
-        plist_json = json.dumps(plist)
+        # enrich playlist with durations for tracks so front-end can size timeline boxes
+        enriched = []
+        for item in plist:
+            if item.get('type') == 'track':
+                d = get_track_duration(item.get('track'))
+                enriched.append({'type': 'track', 'track': item.get('track'), 'duration': d})
+            elif item.get('type') == 'delay':
+                enriched.append({'type': 'delay', 'seconds': item.get('seconds', 0), 'duration': item.get('seconds', 0)})
+        plist_json = json.dumps(enriched)
         html += f'<li class="guest-card">'
         html += f'<div class="guest-header">👤 Guest {guest}</div>'
         html += '<form method="POST" action="/playlist" class="playlist-form">'
@@ -233,106 +240,123 @@ async def index(request):
 
     html += r'''</div>
 <script>
-  // Create a track row element
-  function createTrackRow(track) {
-    const li = document.createElement('li');
-    li.setAttribute('draggable', 'true');
-    li.setAttribute('data-type', 'track');
-    li.setAttribute('data-track', track);
-    li.className = 'track-row';
-    li.style.cssText = 'padding:10px 12px; border-radius:6px; margin-bottom:6px; display:flex; align-items:center; gap:10px;';
-    li.innerHTML = '<span class="handle" style="cursor:move; color:#8b949e;">⋮⋮</span>' +
-      '<span class="track" style="flex:1;">🎵 ' + track + '</span>' +
-      '<button type="button" class="remove btn btn-danger" style="padding:4px 10px; font-size:0.8em;">✕</button>';
-    return li;
+  // Timeline rendering utilities
+  function pxPerSecondFor(container, totalSeconds) {
+    const maxWidth = Math.max(400, container.clientWidth - 40);
+    if (totalSeconds <= 0) return 40;
+    let pps = maxWidth / totalSeconds; // fit whole timeline
+    // clamp to reasonable bounds
+    pps = Math.max(8, Math.min(pps, 80));
+    return pps;
   }
 
-  // Create a delay row element
-  function createDelayRow(seconds) {
-    const li = document.createElement('li');
-    li.setAttribute('draggable', 'true');
-    li.setAttribute('data-type', 'delay');
-    li.className = 'delay-row';
-    li.style.cssText = 'padding:10px 12px; border-radius:6px; margin-bottom:6px; display:flex; align-items:center; gap:10px;';
-    li.innerHTML = '<span class="handle" style="cursor:move; color:#8b949e;">⋮⋮</span>' +
-      '<span>⏱️ Delay:</span>' +
-      '<input type="number" class="delay-seconds" value="' + (seconds||0) + '" style="width:70px;" step="0.1" min="0" />' +
-      '<span style="color:#8b949e;">seconds</span>' +
-      '<span style="flex:1;"></span>' +
-      '<button type="button" class="remove btn btn-danger" style="padding:4px 10px; font-size:0.8em;">✕</button>';
-    return li;
+  function createBlock(item) {
+    const div = document.createElement('div');
+    div.className = (item.type === 'track') ? 'timeline-item track-item' : 'timeline-item delay-item';
+    div.setAttribute('draggable', 'true');
+    div.dataset.type = item.type;
+    if (item.type === 'track') {
+      div.dataset.track = item.track;
+      div.dataset.duration = item.duration || 0;
+      div.innerHTML = '<div class="label">🎵 ' + item.track + '</div><div class="meta">' + (item.duration ? (item.duration.toFixed(1) + 's') : '') + '</div>';
+    } else {
+      div.dataset.seconds = item.seconds || 0;
+      div.dataset.duration = item.seconds || 0;
+      div.innerHTML = '<div class="label">⏱️ Delay</div><div class="meta">' + (item.seconds ? (item.seconds.toFixed(1) + 's') : '') + '</div>';
+    }
+    return div;
   }
 
-  // Playlist editor initialization
+  function renderTimeline(ul) {
+    // ul is the timeline container
+    const items = Array.from(ul.children);
+    // compute total seconds
+    let total = 0;
+    items.forEach(function(div) { total += parseFloat(div.dataset.duration || 0); });
+    const pps = pxPerSecondFor(ul, total);
+    items.forEach(function(div) {
+      const dur = parseFloat(div.dataset.duration || 0);
+      const width = Math.max(24, Math.round(dur * pps));
+      div.style.width = width + 'px';
+    });
+  }
+
+  // Replace playlist-list with horizontal timeline
   document.addEventListener('DOMContentLoaded', function() {
     document.querySelectorAll('form.playlist-form').forEach(function(form) {
       const guestId = form.querySelector('input[name="guest_id"]').value;
       const textarea = form.querySelector('textarea[name="playlist"]');
       let playlist = [];
-      try {
-        playlist = JSON.parse(textarea.value) || [];
-      } catch(e) { playlist = []; }
-      
-      const ul = document.createElement('ul');
-      ul.className = 'playlist-list';
-      ul.setAttribute('data-guest', guestId);
-      ul.style.cssText = 'list-style:none; padding:0; margin:0 0 12px 0; min-height:40px; background:#0d1117; border:1px dashed #30363d; border-radius:6px; padding:8px;';
-      
-      // Build rows from playlist
+      try { playlist = JSON.parse(textarea.value) || []; } catch(e) { playlist = []; }
+
+      const timeline = document.createElement('div');
+      timeline.className = 'timeline';
+      timeline.style.cssText = 'display:flex; align-items:center; gap:8px; padding:8px; min-height:64px; overflow-x:auto; border-radius:8px;';
+
+      // populate
       playlist.forEach(function(item) {
-        if (item.type === 'track') {
-          ul.appendChild(createTrackRow(item.track));
-        } else if (item.type === 'delay') {
-          ul.appendChild(createDelayRow(item.seconds));
-        }
+        const block = createBlock(item);
+        timeline.appendChild(block);
       });
-      
-      // Insert playlist before the button group
+
+      // insert timeline before btn-group
       const btnGroup = form.querySelector('.btn-group');
-      form.insertBefore(ul, btnGroup);
-      
-      // Drag and drop
+      form.insertBefore(timeline, btnGroup);
+
+      // make timeline draggable for reorder
       let dragSrc = null;
-      ul.addEventListener('dragstart', function(e) { 
-        if (e.target.tagName === 'LI') {
-          dragSrc = e.target; 
-          e.dataTransfer.effectAllowed = 'move';
-          e.target.style.opacity = '0.4';
-        }
+      timeline.addEventListener('dragstart', function(e) {
+        const li = e.target.closest('.timeline-item');
+        if (!li) return;
+        dragSrc = li;
+        e.dataTransfer.effectAllowed = 'move';
+        li.style.opacity = '0.4';
       });
-      ul.addEventListener('dragend', function(e) {
-        if (e.target.tagName === 'LI') {
-          e.target.style.opacity = '1';
-        }
+      timeline.addEventListener('dragend', function(e) { if (dragSrc) dragSrc.style.opacity = '1'; dragSrc = null; });
+      timeline.addEventListener('dragover', function(e) { e.preventDefault(); });
+      timeline.addEventListener('drop', function(e) {
+        e.preventDefault();
+        const target = e.target.closest('.timeline-item');
+        if (!target || !dragSrc || target === dragSrc) return;
+        // determine position
+        const rect = target.getBoundingClientRect();
+        const mid = rect.left + rect.width/2;
+        if (e.clientX < mid) timeline.insertBefore(dragSrc, target);
+        else timeline.insertBefore(dragSrc, target.nextSibling);
+        // rerender widths
+        renderTimeline(timeline);
       });
-      ul.addEventListener('dragover', function(e) { e.preventDefault(); });
-      ul.addEventListener('drop', function(e) { 
-        e.preventDefault(); 
-        const target = e.target.closest('li');
-        if (target && dragSrc && target !== dragSrc) { 
-          const rect = target.getBoundingClientRect();
-          const midY = rect.top + rect.height / 2;
-          if (e.clientY < midY) {
-            ul.insertBefore(dragSrc, target);
-          } else {
-            ul.insertBefore(dragSrc, target.nextSibling);
-          }
-        }
+
+      // click to edit delay seconds
+      timeline.addEventListener('dblclick', function(e) {
+        const block = e.target.closest('.timeline-item');
+        if (!block || block.dataset.type !== 'delay') return;
+        const current = parseFloat(block.dataset.seconds || 0);
+        const val = prompt('Set delay seconds:', current);
+        if (val === null) return;
+        const secs = parseFloat(val) || 0;
+        block.dataset.seconds = secs;
+        block.dataset.duration = secs;
+        block.querySelector('.meta').textContent = secs.toFixed(1) + 's';
+        renderTimeline(timeline);
       });
-      
-      // Remove button handler
-      ul.addEventListener('click', function(e) { 
-        if (e.target.classList.contains('remove')) { 
-          e.target.closest('li').remove(); 
-        }
+
+      // remove handler (right-click)
+      timeline.addEventListener('contextmenu', function(e) {
+        const block = e.target.closest('.timeline-item');
+        if (!block) return;
+        e.preventDefault();
+        if (confirm('Remove this item?')) { block.remove(); renderTimeline(timeline); }
       });
-      
+
       // Add delay button
       form.querySelector('.add-delay-btn').addEventListener('click', function() {
-        ul.appendChild(createDelayRow(0));
+        const block = createBlock({ type: 'delay', seconds: 1.0 });
+        timeline.appendChild(block);
+        renderTimeline(timeline);
       });
-      
-      // File upload handler
+
+      // File upload handler (AJAX)
       const fileInput = form.querySelector('.upload-input');
       fileInput.addEventListener('change', function() {
         if (!this.files.length) return;
@@ -340,48 +364,43 @@ async def index(request):
         const formData = new FormData();
         formData.append('guest_id', guestId);
         formData.append('file', file);
-        
-        fetch('/upload', {
-          method: 'POST',
-          body: formData
-        })
-        .then(resp => {
-          if (resp.ok) {
-            // Add track and delay row to UI
-            const safeName = file.name.replace(/ /g, '_');
-            ul.appendChild(createTrackRow(safeName));
-            ul.appendChild(createDelayRow(0));
+        fetch('/upload', { method: 'POST', body: formData })
+        .then(resp => resp.json())
+        .then(data => {
+          if (data && data.status === 'ok') {
+            const duration = data.duration || 0;
+            timeline.appendChild(createBlock({ type: 'track', track: data.filename, duration: duration }));
+            timeline.appendChild(createBlock({ type: 'delay', seconds: 1.0, duration: 1.0 }));
+            renderTimeline(timeline);
           } else {
             alert('Upload failed');
           }
         })
         .catch(() => alert('Network error'));
-        
-        // Reset input
         this.value = '';
       });
-      
-      // Submit handler
+
+      // Submit handler - converts timeline to playlist array
       form.addEventListener('submit', function(e) {
         e.preventDefault();
         const items = [];
-        ul.querySelectorAll('li').forEach(function(li) {
-          const type = li.getAttribute('data-type');
-          if (type === 'track') {
-            items.push({ type: 'track', track: li.getAttribute('data-track') });
-          } else if (type === 'delay') {
-            const seconds = parseFloat(li.querySelector('.delay-seconds').value) || 0;
-            items.push({ type: 'delay', seconds: seconds });
+        timeline.querySelectorAll('.timeline-item').forEach(function(div) {
+          if (div.dataset.type === 'track') {
+            items.push({ type: 'track', track: div.dataset.track, duration: parseFloat(div.dataset.duration || 0) });
+          } else if (div.dataset.type === 'delay') {
+            const secs = parseFloat(div.dataset.seconds || 0);
+            items.push({ type: 'delay', seconds: secs });
           }
         });
         fetch('/playlist', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ guest_id: guestId, playlist: items })
-        })
-        .then(resp => resp.ok ? alert('Playlist saved') : alert('Error saving playlist'))
-        .catch(() => alert('Network error'));
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ guest_id: guestId, playlist: items })
+        }).then(resp => resp.ok ? alert('Playlist saved') : alert('Error saving playlist')).catch(() => alert('Network error'));
       });
+
+      // initial render
+      renderTimeline(timeline);
+      // adjust on resize
+      window.addEventListener('resize', function() { renderTimeline(timeline); });
     });
   });
 </script>
@@ -476,9 +495,10 @@ async def upload_handler(request):
                 print(f"[{format_time(time.time())}] Pushed file to client {guest_id} at {ip}:{remote_path}")
             except Exception as e:
                 print(f"Failed to push file to client {guest_id}: {e}")
-        # Return JSON for AJAX requests, redirect for form submissions
+        # Return JSON for AJAX requests, include duration so the UI can size the timeline
         if request.headers.get('Accept', '').find('application/json') >= 0 or 'fetch' in request.headers.get('Sec-Fetch-Mode', ''):
-            return web.json_response({'status': 'ok', 'filename': safe_fname})
+            duration = get_track_duration(safe_fname)
+            return web.json_response({'status': 'ok', 'filename': safe_fname, 'duration': duration})
     return web.HTTPFound('/')
 
 async def start_handler(request):

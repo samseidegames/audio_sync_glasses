@@ -14,16 +14,31 @@ import argparse
 import subprocess
 import sys
 from pathlib import Path
+from datetime import datetime
 import websockets
 import RPi.GPIO as GPIO  # type: ignore
 import re
 import urllib.request
+
+# Try to import mutagen for duration detection; fall back gracefully
+try:
+    from mutagen.mp3 import MP3
+except Exception:
+    MP3 = None
+
+
+def format_time(timestamp):
+    return datetime.fromtimestamp(timestamp).strftime('%H:%M:%S.%f')[:-3]
 
 # CONFIGURATION
 SERVER_URI = 'ws://willowcrestmanor.local:8765'  # default server URI, can be overridden by --server argument
 AUDIO_DIR = Path(__file__).parent / 'audio'
 LOCAL_OFFSET = 0.0  # seconds (set via NTP/PTP externally)
 CONFIG_PATH = Path(__file__).parent / 'paired_device.txt'
+
+# scheduler state for logging delays
+scheduled_queue = []  # list of dicts {'track','timestamp','offset'} sorted by timestamp
+last_expected_end_time = None  # server-timestamp of when last scheduled track is expected to finish
 
 BUTTON_PIN = 17  # BCM pin number for discovery button
 
@@ -138,6 +153,24 @@ async def send_registration(ws, guest_id):
     await ws.send(json.dumps(msg))
     print(f"Registered with master as guest {guest_id} (install_dir={install_dir})")
 
+def get_track_duration(track_file):
+    """Return duration in seconds for an MP3, 0.0 if unknown."""
+    path = AUDIO_DIR / track_file
+    if not path.exists():
+        # attempt to download if missing
+        download_track(track_file)
+    if not path.exists() or MP3 is None:
+        if MP3 is None:
+            print("Warning: mutagen not available; cannot determine track duration.")
+        return 0.0
+    try:
+        audio = MP3(str(path))
+        return audio.info.length
+    except Exception as e:
+        print(f"Warning: failed to read duration for {track_file}: {e}")
+        return 0.0
+
+
 def download_track(track_file):
     """Download track from server HTTP audio endpoint"""
     try:
@@ -145,20 +178,21 @@ def download_track(track_file):
         base = SERVER_URI.replace('ws://', 'http://').rstrip('/ws')
         url = f"{base}/audio/{track_file}"
         dest = AUDIO_DIR / track_file
-        print(f"Downloading track from {url} to {dest}")
+        print(f"[{format_time(time.time())}] Downloading track from {url} to {dest}")
         AUDIO_DIR.mkdir(parents=True, exist_ok=True)
         urllib.request.urlretrieve(url, dest)
-        print(f"Downloaded {track_file}")
+        print(f"[{format_time(time.time())}] Downloaded {track_file}")
     except Exception as e:
-        print(f"Failed to download {track_file}: {e}")
+        print(f"[{format_time(time.time())}] Failed to download {track_file}: {e}")
 
 async def schedule_play(track_file, timestamp, offset):
+    global last_expected_end_time, scheduled_queue
     # Refresh clock sync before scheduling playback to reduce drift
     await sync_clock(samples=3, timeout=1.0, delay_between=0.01)
     now = time.time() + LOCAL_OFFSET
     delay = timestamp - now
     if delay < 0:
-        print(f"Missed start by {-delay:.3f}s, playing immediate with offset adjustment.")
+        print(f"[{format_time(time.time())}] Missed start by {-delay:.3f}s, playing immediate with offset adjustment.")
         offset += -delay
         delay = 0
     await asyncio.sleep(delay)
@@ -166,17 +200,43 @@ async def schedule_play(track_file, timestamp, offset):
     if not path.exists():
         download_track(track_file)
         if not path.exists():
-            print(f"Error: track {path} not found.")
+            print(f"[{format_time(time.time())}] Error: track {path} not found.")
             return
     cmd = [
         'mpv', '--no-video', '--really-quiet', '--audio-device=pulse',
         f'--start={offset}', str(path)
     ]
-    print(f"Starting playback: {cmd}")
+    print(f"[{format_time(time.time())}] Starting playback: {track_file} (offset {offset}s)")
     proc = subprocess.Popen(cmd)
+    # remove this play from scheduled_queue (match by track and timestamp)
+    try:
+        for i, s in enumerate(list(scheduled_queue)):
+            if s.get('track') == track_file and abs(s.get('timestamp', 0) - timestamp) < 0.001:
+                scheduled_queue.pop(i)
+                break
+    except Exception:
+        pass
     # wait for playback process to complete
     await asyncio.get_running_loop().run_in_executor(None, proc.wait)
-    print(f"Playback finished for {track_file}")
+    # compute remaining duration considering offset
+    duration = get_track_duration(track_file)
+    remaining = max(0.0, duration - offset)
+    finished_time = timestamp + remaining
+    print(f"[{format_time(finished_time)}] Playback finished for {track_file} (duration: {duration:.1f}s, offset: {offset:.1f}s)")
+    last_expected_end_time = finished_time
+    # if there is a next scheduled play, compute delay and report
+    next_item = None
+    for s in scheduled_queue:
+        if s.get('timestamp', 0) >= finished_time - 0.0001:
+            next_item = s
+            break
+    if next_item:
+        delay_seconds = next_item.get('timestamp', 0) - finished_time
+        if delay_seconds > 0:
+            print(f"[{format_time(finished_time)}] Delay: {delay_seconds:.1f}s before next track ({next_item.get('track')})")
+    else:
+        # no known next item — nothing to log
+        pass
 
 async def handle_command(cmd):
     ctype = cmd.get('type')
@@ -184,6 +244,14 @@ async def handle_command(cmd):
         track = cmd['track']
         timestamp = cmd['timestamp']
         offset = cmd.get('offset', 0.0)
+        # Log scheduled gap vs previous expected end
+        global scheduled_queue, last_expected_end_time
+        if last_expected_end_time is not None and timestamp > last_expected_end_time + 0.001:
+            gap = timestamp - last_expected_end_time
+            print(f"[{format_time(time.time())}] Scheduled delay of {gap:.1f}s before {track}")
+        # add to scheduled queue (keep sorted)
+        scheduled_queue.append({'track': track, 'timestamp': timestamp, 'offset': offset})
+        scheduled_queue.sort(key=lambda x: x['timestamp'])
         asyncio.create_task(schedule_play(track, timestamp, offset))
     else:
         print(f"Unhandled command type: {ctype}")
