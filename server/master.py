@@ -810,9 +810,19 @@ async def upload_handler(request):
                     temp_path.unlink()  # Delete original MP3
                     print(f"[{format_time(time.time())}] Converted to {wav_fname}")
                 else:
+                    ffmpeg_error = result.stderr.decode('utf-8', errors='ignore') if result.stderr else 'Unknown error'
+                    print(f"[{format_time(time.time())}] FFmpeg error: {ffmpeg_error}")
                     print(f"[{format_time(time.time())}] Conversion failed, keeping MP3")
                     final_path = temp_path
                     wav_fname = safe_fname
+            except FileNotFoundError:
+                print(f"[{format_time(time.time())}] ERROR: FFmpeg not found. Please install FFmpeg:")
+                print(f"  Windows: Download from https://ffmpeg.org/download.html or use: choco install ffmpeg")
+                print(f"  Linux: apt-get install ffmpeg")
+                print(f"  Mac: brew install ffmpeg")
+                print(f"  Keeping original MP3 file.")
+                final_path = temp_path
+                wav_fname = safe_fname
             except Exception as e:
                 print(f"[{format_time(time.time())}] Conversion error: {e}, keeping original")
                 final_path = temp_path
@@ -833,12 +843,13 @@ async def upload_handler(request):
                 ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
                 ssh.connect(hostname=ip, username='pi', password=password)
                 sftp = ssh.open_sftp()
-                audio_dir = os.path.join(install_dir, 'audio')
+                # Use forward slashes for remote Unix/Linux paths
+                audio_dir = install_dir.rstrip('/') + '/audio'
                 try:
                     sftp.mkdir(audio_dir)
                 except IOError:
                     pass
-                remote_path = os.path.join(audio_dir, wav_fname)
+                remote_path = audio_dir.rstrip('/') + '/' + wav_fname
                 sftp.put(str(final_path), remote_path)
                 sftp.close()
                 ssh.close()
