@@ -171,7 +171,10 @@ async def schedule_play(track_file, timestamp, offset):
         f'--start={offset}', str(path)
     ]
     print(f"Starting playback: {cmd}")
-    subprocess.Popen(cmd)
+    proc = subprocess.Popen(cmd)
+    # wait for playback process to complete
+    await asyncio.get_running_loop().run_in_executor(None, proc.wait)
+    print(f"Playback finished for {track_file}")
 
 async def handle_command(cmd):
     ctype = cmd.get('type')
