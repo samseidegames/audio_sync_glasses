@@ -24,7 +24,7 @@ echo
 
 # 1. System update and dependencies
 apt update && apt upgrade -y
-apt install -y python3 python3-venv python3-pip mpv bluetooth bluez bluez-tools wpasupplicant openntpd python3-rpi.gpio
+apt install -y python3 python3-venv python3-pip mpv bluetooth bluez bluez-tools wpasupplicant openntpd python3-rpi.gpio bluealsa pulseaudio pulseaudio-utils pulseaudio-module-bluetooth
 
 # Configure Wi-Fi network if not present
 WPA_CONF='/etc/wpa_supplicant/wpa_supplicant.conf'

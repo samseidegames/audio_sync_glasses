@@ -167,7 +167,7 @@ async def schedule_play(track_file, timestamp, offset):
             print(f"Error: track {path} not found.")
             return
     cmd = [
-        'mpv', '--no-video', '--really-quiet',
+        'mpv', '--no-video', '--really-quiet', '--audio-device=pulse',
         f'--start={offset}', str(path)
     ]
     print(f"Starting playback: {cmd}")

@@ -16,7 +16,10 @@ from aiohttp import web
 import aiohttp
 import socket
 from zeroconf import Zeroconf, ServiceInfo
+from aiohttp import WSMsgType
 import subprocess
+import os
+import paramiko
 
 # CONFIGURATION
 def _get_local_ip():
@@ -148,12 +151,16 @@ async def index(request):
     return web.Response(text=html, content_type='text/html')
 
 async def ws_handler(request):
+    from aiohttp import WSMsgType
     # WebSocket handler: support time sync and client registration
     ws = web.WebSocketResponse()
     await ws.prepare(request)
-    # register
-    msg = await ws.receive_str()
-    data = json.loads(msg)
+    # register: expect first TEXT message with registration and install_dir
+    msg = await ws.receive()
+    if msg.type != WSMsgType.TEXT:
+        await ws.close()
+        return ws
+    data = json.loads(msg.data)
     gid = data.get('guest_id')
     if gid:
         clients[gid] = ws
@@ -162,6 +169,9 @@ async def ws_handler(request):
         client_paths[gid] = data.get('install_dir', '')
     try:
         async for msg in ws:
+            # skip non-text messages
+            if msg.type != WSMsgType.TEXT:
+                continue
             try:
                 data = json.loads(msg.data)
             except Exception:
@@ -181,8 +191,10 @@ async def ws_handler(request):
 
 async def upload_handler(request):
     reader = await request.multipart()
+    # First form field: guest ID
     field = await reader.next()
     guest_id = (await field.text()).strip()
+    # Next form field: file
     field = await reader.next()
     if field.name == 'file':
         fname = f'{guest_id}.mp3'
@@ -195,29 +207,28 @@ async def upload_handler(request):
                     break
                 f.write(chunk)
         PLAYLIST[guest_id] = fname
-        # push file to client via SCP if connected (using sshpass for password auth)
+        # push file to client via SFTP if connected
         ip = client_addrs.get(guest_id)
-        install_dir = client_paths.get(guest_id, '/home/pi/audio_sync_glasses/client')
-        if ip:
-            # ensure remote audio directory exists at client install path
+        install_dir = client_paths.get(guest_id, '')
+        if ip and install_dir:
             password = 'raspberry'
-            mkdir_cmd = [
-                'sshpass', '-p', password, 'ssh',
-                '-o', 'StrictHostKeyChecking=no',
-                '-o', 'UserKnownHostsFile=/dev/null',
-                f'pi@{ip}',
-                f'mkdir -p {install_dir}/audio'
-            ]
-            subprocess.run(mkdir_cmd, check=False)
-            # copy file via scp
-            client_path = f'pi@{ip}:{install_dir}/audio/{fname}'
-            scp_cmd = [
-                'sshpass', '-p', password, 'scp',
-                '-o', 'StrictHostKeyChecking=no',
-                '-o', 'UserKnownHostsFile=/dev/null',
-                str(path), client_path
-            ]
-            subprocess.run(scp_cmd, check=False)
+            try:
+                ssh = paramiko.SSHClient()
+                ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+                ssh.connect(hostname=ip, username='pi', password=password)
+                sftp = ssh.open_sftp()
+                audio_dir = os.path.join(install_dir, 'audio')
+                try:
+                    sftp.mkdir(audio_dir)
+                except IOError:
+                    pass
+                remote_path = os.path.join(audio_dir, fname)
+                sftp.put(str(path), remote_path)
+                sftp.close()
+                ssh.close()
+                print(f'Pushed file to client {guest_id} at {ip}:{remote_path}')
+            except Exception as e:
+                print(f"Failed to push file to client {guest_id}: {e}")
     return web.HTTPFound('/')
 
 async def start_handler(request):
