@@ -242,9 +242,12 @@ async def index(request):
             '<style>'
             '* { box-sizing: border-box; }'
             'body { font-family: "Segoe UI", system-ui, sans-serif; background: #0d1117; color: #c9d1d9; margin:0; padding:0; }'
+            '.header-wrapper { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:30px; }'
+            '.header-left { flex:1; }'
+            '.header-right { flex-shrink:0; }'
             '.container { width:75vw; max-width:1600px; min-width:700px; margin:40px auto; background:#161b22; padding:30px; border-radius:12px; border:1px solid #30363d; }'
-            'h1 { text-align:center; color:#58a6ff; font-weight:600; margin-bottom:10px; }'
-            '.subtitle { text-align:center; color:#8b949e; margin-bottom:30px; }'
+            'h1 { text-align:left; color:#58a6ff; font-weight:600; margin:0 0 10px 0; }'
+            '.subtitle { text-align:left; color:#8b949e; margin:0 0 10px 0; }'
             'h2 { color:#c9d1d9; margin-top:30px; font-size:1.2em; border-bottom:1px solid #30363d; padding-bottom:10px; }'
             '.guest-list { list-style:none; padding:0; margin:0; }'
             '.guest-card { background:#21262d; border:1px solid #30363d; border-radius:8px; padding:16px; margin-bottom:16px; }'
@@ -270,7 +273,8 @@ async def index(request):
             '.track-row { background:#1c3a2e; border:1px solid #238636 !important; }'
             '.delay-row { background:#2d2a1c; border:1px solid #9e6a03 !important; }'
             '.upload-input { display:none; }'
-            '.start-section { text-align:center; margin-top:40px; padding-top:20px; border-top:1px solid #30363d; }'
+            '.start-section { display:none; }'
+            '.start-button-wrapper { position:fixed; top:30px; right:30px; z-index:100; }'
             '.timeline-container { width: 100%; max-width: 1600px; margin: 0 auto 12px auto; overflow-x: auto; }'
             '.timeline-ruler { overflow-x:auto; overflow-y:hidden; height:40px; }'
             '.timeline-item .label { font-size:11px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width: calc(100% - 60px); display:inline-block; }'
@@ -281,10 +285,12 @@ async def index(request):
             '.zoom-controls .btn { padding:6px 10px; font-size:12px; }'
             '.zoom-level { color:#8b949e; font-size:12px; padding:4px 8px; }'
             '</style>'
-            '</head>'
-            '<body><div class="container">')
-    html += '<h1>🎭 Willowcrest Manor</h1>'
-    html += '<p class="subtitle">Audio Master Control</p>'
+            '<body>'
+            '<div class="start-button-wrapper"><form method="POST" action="/start"><button type="submit" class="btn btn-go">▶️ GO</button></form></div>'
+            '<div class="container">')
+    html += '<div class="header-wrapper">'
+    html += '<div class="header-left"><h1>🎭 Willowcrest Manor</h1><p class="subtitle">Audio Master Control</p></div>'
+    html += '</div>'
     html += '<h2>Connected Guests</h2><ul class="guest-list">'
     # Playlist editor per guest
     for guest in guests:
@@ -313,14 +319,6 @@ async def index(request):
     if not guests:
         html += '<li class="guest-card" style="text-align:center; color:#8b949e;">No guests connected</li>'
     html += '</ul>'
-
-    # start show button
-    html += '<div class="start-section">'
-    html += '<h2>Start Show</h2>'
-    html += '<form method="POST" action="/start">'
-    html += '<button type="submit" class="btn btn-go">▶️ GO</button>'
-    html += '</form>'
-    html += '</div>'
 
     html += r'''</div>
 <script>
@@ -398,7 +396,7 @@ async def index(request):
 
       // Add zoom controls to the btn-group (below the timeline)
       let btnGroup = form.querySelector('.btn-group');
-      const initialZoomMultiplier = (pps / 4).toFixed(2);
+      const initialZoomMultiplier = (pps / 36).toFixed(2);
       const zoomControls = document.createElement('div');
       zoomControls.className = 'zoom-controls';
       zoomControls.style.cssText = 'position:static; gap:8px; margin-left:auto; display:flex; align-items:center;';
@@ -428,22 +426,22 @@ async def index(request):
           b.style.left = timeToPx(start, pps) + 'px';
           b.style.width = Math.max(40, Math.round(dur * pps)) + 'px';
         });
-        // update zoom label with multiplier format
-        const zoomMult = (pps / 4).toFixed(2);
+        // update zoom label with multiplier format (0.25 increment)
+        const zoomMult = (pps / 36).toFixed(2);
         zoomControls.querySelector('.zoom-level').textContent = 'Zoom: ' + zoomMult + 'x';
       }
 
-      // wire zoom buttons
-      zoomControls.querySelector('.zoom-in').addEventListener('click', function(){ updateScale(Math.round(pps * 1.25)); });
-      zoomControls.querySelector('.zoom-out').addEventListener('click', function(){ updateScale(Math.round(pps / 1.25)); });
+      // wire zoom buttons - increment by 0.25x (which is 9 pps increments since 36/4 = 9)
+      zoomControls.querySelector('.zoom-in').addEventListener('click', function(){ updateScale(pps + 9); });
+      zoomControls.querySelector('.zoom-out').addEventListener('click', function(){ updateScale(pps - 9); });
 
       // allow wheel to zoom when hovering this timeline (per-timeline independent zoom)
       timelineContainer.addEventListener('wheel', function(e) {
         // only when Ctrl is pressed or when user mouses over the zoomControls area (prevent accidental scroll zoom)
         // Accept zoom on wheel over the timeline for convenience
         e.preventDefault();
-        if (e.deltaY < 0) updateScale(Math.round(pps * 1.15));
-        else updateScale(Math.round(pps / 1.15));
+        if (e.deltaY < 0) updateScale(pps + 9);  // scroll up = zoom in (0.25 increment)
+        else updateScale(pps - 9);               // scroll down = zoom out (0.25 increment)
       }, { passive: false });
 
       // single-row timeline (left-to-right) that snaps blocks together
