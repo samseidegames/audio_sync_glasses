@@ -208,18 +208,21 @@ async def schedule_play(track_file, timestamp, offset):
     ]
     print(f"[{format_time(time.time())}] Starting playback: {track_file} (offset {offset}s)")
     proc = subprocess.Popen(cmd)
-    # remove this play from scheduled_queue (match by track and timestamp)
+    # remove this play from scheduled_queue (match by track and timestamp) and capture duration from server if present
+    duration = None
     try:
         for i, s in enumerate(list(scheduled_queue)):
             if s.get('track') == track_file and abs(s.get('timestamp', 0) - timestamp) < 0.001:
+                duration = float(s.get('duration', 0) or 0)
                 scheduled_queue.pop(i)
                 break
     except Exception:
         pass
     # wait for playback process to complete
     await asyncio.get_running_loop().run_in_executor(None, proc.wait)
-    # compute remaining duration considering offset
-    duration = get_track_duration(track_file)
+    # compute remaining duration considering offset; prefer server-provided duration
+    if duration is None or duration == 0:
+        duration = get_track_duration(track_file)
     remaining = max(0.0, duration - offset)
     finished_time = timestamp + remaining
     print(f"[{format_time(finished_time)}] Playback finished for {track_file} (duration: {duration:.1f}s, offset: {offset:.1f}s)")

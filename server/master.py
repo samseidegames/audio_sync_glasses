@@ -449,16 +449,12 @@ async def index(request):
         if (confirm('Remove this item?')) block.remove();
       });
 
-      // add delay button places delay at end of shortest lane
+      // add delay button places delay at end of single lane
       form.querySelector('.add-delay-btn').addEventListener('click', function() {
-        // find lane with smallest end
-        let mins = Infinity, idx = 0;
-        for (let i=0;i<lanesCount;i++) {
-          const last = Array.from(lanes[i].children).reduce((m,b)=>Math.max(m, parseFloat(b.dataset.start||0) + parseFloat(b.dataset.duration||0)), 0);
-          if (last < mins) { mins = last; idx = i; }
-        }
+        const last = Array.from(lane.children).reduce((m,b)=>Math.max(m, parseFloat(b.dataset.start||0) + parseFloat(b.dataset.duration||0)), 0);
         const block = createBlock({type:'delay', seconds:1.0});
-        placeBlock(idx, block, mins || 0);
+        placeBlock(block, last || 0);
+        reflow();
       });
 
       // file upload handler adds block to lane 0 end
@@ -478,19 +474,19 @@ async def index(request):
         })
         .then(data => {
           if (data && data.status === 'ok') {
-            // place at end of lane 0
-            const last = Array.from(lanes[0].children).reduce((m,b)=>Math.max(m, parseFloat(b.dataset.start||0) + parseFloat(b.dataset.duration||0)), 0);
+            // place at end of single lane
+            const last = Array.from(lane.children).reduce((m,b)=>Math.max(m, parseFloat(b.dataset.start||0) + parseFloat(b.dataset.duration||0)), 0);
             const block = createBlock({type:'track', track:data.filename, duration:data.duration || 0});
-            placeBlock(0, block, last || 0);
+            placeBlock(block, last || 0);
+            // ensure blocks snap adjacent after insertion
+            reflow();
             // auto-save updated timeline to server so server playlist reflects the uploaded track immediately
             const items = [];
-            for (let i=0;i<lanes.length;i++) {
-              Array.from(lanes[i].children).forEach(function(b) {
-                const start = parseFloat(b.dataset.start || 0);
-                if (b.dataset.type === 'track') items.push({ type:'track', track:b.dataset.track, start:start, duration: parseFloat(b.dataset.duration||0) });
-                else items.push({ type:'delay', start:start, seconds: parseFloat(b.dataset.seconds||0) });
-              });
-            }
+            Array.from(lane.children).forEach(function(b) {
+              const start = parseFloat(b.dataset.start || 0);
+              if (b.dataset.type === 'track') items.push({ type:'track', track:b.dataset.track, start:start, duration: parseFloat(b.dataset.duration||0) });
+              else items.push({ type:'delay', start:start, seconds: parseFloat(b.dataset.seconds||0) });
+            });
             items.sort((a,b)=> (a.start||0) - (b.start||0));
             fetch('/playlist', { method: 'POST', headers:{ 'Content-Type': 'application/json', 'Accept': 'application/json' }, body: JSON.stringify({ guest_id: guestId, playlist: items }) })
             .then(r=> { if (!r.ok) console.warn('Failed to auto-save playlist after upload'); })
