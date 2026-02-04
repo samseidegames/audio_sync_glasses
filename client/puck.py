@@ -192,7 +192,7 @@ def download_track(track_file):
 async def schedule_play(track_file, timestamp, offset):
     global last_expected_end_time, scheduled_queue
     # Refresh clock sync before scheduling playback to reduce drift
-    await sync_clock(samples=3, timeout=1.0, delay_between=0.01)
+    # Light-weight drift check instead of full re-sync before each track to reduce jitter
     now = time.time() + LOCAL_OFFSET
     delay = timestamp - now
     if delay < 0:
@@ -211,6 +211,7 @@ async def schedule_play(track_file, timestamp, offset):
             return
     cmd = [
         'mpv', '--no-video', '--really-quiet', '--audio-device=pulse',
+        '--cache=yes', '--demuxer-max-bytes=500M', '--audio-buffer=200',
         f'--start={offset}', str(path)
     ]
     print(f"[{format_time(time.time())}] Starting playback: {track_file} (offset {offset}s)")

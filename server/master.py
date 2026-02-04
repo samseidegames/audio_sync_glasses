@@ -113,6 +113,26 @@ async def start_show():
             print(f"Warning: guest {guest_id} has no playlist entries")
             continue
         t = base_time
+        # Calculate the actual end time of the playlist by finding max(start + duration)
+        playlist_end_time = base_time
+        for item in entries:
+            if item.get('type') == 'track':
+                duration = float(item.get('duration', 0))
+                start_offset = item.get('start')
+                if start_offset is not None:
+                    end = base_time + float(start_offset) + duration
+                else:
+                    end = base_time + duration
+                playlist_end_time = max(playlist_end_time, end)
+            elif item.get('type') == 'delay':
+                delay_seconds = float(item.get('seconds', 0))
+                start_offset = item.get('start')
+                if start_offset is not None:
+                    end = base_time + float(start_offset) + delay_seconds
+                else:
+                    end = base_time + delay_seconds
+                playlist_end_time = max(playlist_end_time, end)
+        # Now send all PLAY commands
         for item in entries:
             if item.get('type') == 'track':
                 track = item.get('track')
@@ -152,11 +172,11 @@ async def start_show():
                 else:
                     # If explicit start exists, log the delay at that point
                     print(f"[{format_time(base_time + float(item.get('start')))}] Delay: {delay_seconds:.1f}s (explicit)")
-        # At the end of this guest's playlist, schedule a playlist-complete message for the client
-        guest_end_times[guest_id] = t
+        # At the end of this guest's playlist, schedule a playlist-complete message for the client with the correct end time
+        guest_end_times[guest_id] = playlist_end_time
         try:
-            await ws.send_json({'type': 'PLAYLIST_COMPLETE', 'timestamp': t})
-            print(f"[{format_time(t)}] Scheduled PLAYLIST_COMPLETE for guest {guest_id}")
+            await ws.send_json({'type': 'PLAYLIST_COMPLETE', 'timestamp': playlist_end_time})
+            print(f"[{format_time(playlist_end_time)}] Scheduled PLAYLIST_COMPLETE for guest {guest_id}")
         except Exception as e:
             print(f"Failed to send PLAYLIST_COMPLETE to guest {guest_id}: {e}")
         # Schedule a server-side notifier to print "Playlist Complete" at runtime for this guest
@@ -166,7 +186,7 @@ async def start_show():
             if delay > 0:
                 await asyncio.sleep(delay)
             print(f"[{format_time(end_ts)}] Playlist Complete for guest {gid}")
-        asyncio.create_task(notify_playlist_complete(guest_id, t))
+        asyncio.create_task(notify_playlist_complete(guest_id, playlist_end_time))
     print(f"All PLAY commands dispatched at {format_time(time.time())}")
     # Schedule a global show-complete notifier at the max end time
     if guest_end_times:
