@@ -264,6 +264,24 @@ async def handle_command(cmd):
         else:
             last_expected_end_time = max(last_expected_end_time, expected_finish)
         asyncio.create_task(schedule_play(track, timestamp, offset))
+    elif ctype == 'PLAYLIST_COMPLETE':
+        ts = float(cmd.get('timestamp', 0))
+        async def log_playlist_complete(at_ts):
+            now = time.time() + LOCAL_OFFSET
+            delay = at_ts - now
+            if delay > 0:
+                await asyncio.sleep(delay)
+            print(f"[{format_time(at_ts)}] Playlist Complete")
+        asyncio.create_task(log_playlist_complete(ts))
+    elif ctype == 'SHOW_COMPLETE':
+        ts = float(cmd.get('timestamp', 0))
+        async def log_show_complete(at_ts):
+            now = time.time() + LOCAL_OFFSET
+            delay = at_ts - now
+            if delay > 0:
+                await asyncio.sleep(delay)
+            print(f"[{format_time(at_ts)}] Show Complete")
+        asyncio.create_task(log_show_complete(ts))
     else:
         print(f"Unhandled command type: {ctype}")
 

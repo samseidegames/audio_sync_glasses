@@ -105,6 +105,7 @@ async def start_show():
     base_time = time.time() + LEAD_TIME
     print(f"Base start time: {format_time(base_time)} (+{LEAD_TIME}s)")
     # send sequential play commands per guest
+    guest_end_times = {}
     for guest_id, ws in clients.items():
         # get playlist entries
         entries = PLAYLISTS.get(guest_id) or [{'type': 'track', 'track': PLAYLIST.get(guest_id)}]
@@ -151,7 +152,39 @@ async def start_show():
                 else:
                     # If explicit start exists, log the delay at that point
                     print(f"[{format_time(base_time + float(item.get('start')))}] Delay: {delay_seconds:.1f}s (explicit)")
+        # At the end of this guest's playlist, schedule a playlist-complete message for the client
+        guest_end_times[guest_id] = t
+        try:
+            await ws.send_json({'type': 'PLAYLIST_COMPLETE', 'timestamp': t})
+            print(f"[{format_time(t)}] Scheduled PLAYLIST_COMPLETE for guest {guest_id}")
+        except Exception as e:
+            print(f"Failed to send PLAYLIST_COMPLETE to guest {guest_id}: {e}")
+        # Schedule a server-side notifier to print "Playlist Complete" at runtime for this guest
+        async def notify_playlist_complete(gid, end_ts):
+            now = time.time()
+            delay = end_ts - now
+            if delay > 0:
+                await asyncio.sleep(delay)
+            print(f"[{format_time(end_ts)}] Playlist Complete for guest {gid}")
+        asyncio.create_task(notify_playlist_complete(guest_id, t))
     print(f"All PLAY commands dispatched at {format_time(time.time())}")
+    # Schedule a global show-complete notifier at the max end time
+    if guest_end_times:
+        global_end = max(guest_end_times.values())
+        print(f"Show scheduled to complete at {format_time(global_end)}")
+        async def notify_show_complete(end_ts):
+            now = time.time()
+            delay = end_ts - now
+            if delay > 0:
+                await asyncio.sleep(delay)
+            print(f"[{format_time(end_ts)}] Show Complete")
+            # send optional SHOW_COMPLETE to all clients
+            for gid, ws in clients.items():
+                try:
+                    await ws.send_json({'type': 'SHOW_COMPLETE', 'timestamp': end_ts})
+                except Exception as e:
+                    print(f"Failed to send SHOW_COMPLETE to guest {gid}: {e}")
+        asyncio.create_task(notify_show_complete(global_end))
 
 def signal_handler(sig, frame):
     print("Shutting down master...")
@@ -177,7 +210,7 @@ async def index(request):
             '<style>'
             '* { box-sizing: border-box; }'
             'body { font-family: "Segoe UI", system-ui, sans-serif; background: #0d1117; color: #c9d1d9; margin:0; padding:0; }'
-            '.container { max-width:900px; margin:40px auto; background:#161b22; padding:30px; border-radius:12px; border:1px solid #30363d; }'
+            '.container { width:75vw; max-width:1600px; min-width:700px; margin:40px auto; background:#161b22; padding:30px; border-radius:12px; border:1px solid #30363d; }'
             'h1 { text-align:center; color:#58a6ff; font-weight:600; margin-bottom:10px; }'
             '.subtitle { text-align:center; color:#8b949e; margin-bottom:30px; }'
             'h2 { color:#c9d1d9; margin-top:30px; font-size:1.2em; border-bottom:1px solid #30363d; padding-bottom:10px; }'
@@ -206,6 +239,15 @@ async def index(request):
             '.delay-row { background:#2d2a1c; border:1px solid #9e6a03 !important; }'
             '.upload-input { display:none; }'
             '.start-section { text-align:center; margin-top:40px; padding-top:20px; border-top:1px solid #30363d; }'
+            '.timeline-container { width: 100%; max-width: 1600px; margin: 0 auto 12px auto; overflow-x: auto; }'
+            '.timeline-ruler { overflow-x:auto; overflow-y:hidden; height:40px; }'
+            '.timeline-item .label { font-size:11px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width: calc(100% - 60px); display:inline-block; }'
+            '.timeline-item .label[title]:hover { text-decoration:underline; }'
+            '.timeline-item .meta { font-size:11px; color:#9aa4ad; margin-left:8px; }'
+            '.resize-handle { position:absolute; right:6px; top:50%; transform:translateY(-50%); width:10px; height:56%; background:rgba(255,255,255,0.06); border-radius:4px; cursor:ew-resize; }'
+            '.zoom-controls { position:absolute; right:12px; top:6px; display:flex; gap:6px; align-items:center; }'
+            '.zoom-controls .btn { padding:6px 10px; font-size:12px; }'
+            '.zoom-level { color:#8b949e; font-size:12px; padding:4px 8px; }'
             '</style>'
             '</head>'
             '<body><div class="container">')
@@ -233,7 +275,7 @@ async def index(request):
         html += '<div class="btn-group">'
         html += '<button type="submit" class="btn btn-primary">💾 Save Playlist</button>'
         html += '<button type="button" class="btn btn-delay add-delay-btn">⏱️ Add Delay</button>'
-        html += f'<label class="btn btn-upload">📁 Upload MP3<input type="file" class="upload-input" accept=".mp3" data-guest="{guest}" /></label>'
+        html += f'<label class="btn btn-upload">📁 Upload MP3<input type="file" class="upload-input" accept=".mp3" multiple data-guest="{guest}" /></label>'
         html += '</div>'
         html += '</form></li>'
     if not guests:
@@ -279,12 +321,14 @@ async def index(request):
       div.classList.add('track-item');
       div.dataset.track = item.track;
       div.dataset.duration = item.duration || 0;
-      div.innerHTML = '<div class="label">🎵 ' + item.track + '</div><div class="meta">' + (item.duration ? (item.duration.toFixed(1) + 's') : '') + '</div>';
+      const name = (item.track || '').replace(/\.[^/.]+$/, '');
+      const safeFull = (item.track || '').replace(/"/g, '&quot;');
+      div.innerHTML = '<div class="label" title="' + safeFull + '">🎵 ' + name + '</div><div class="meta">' + (item.duration ? (item.duration.toFixed(1) + 's') : '') + '</div>';
     } else {
       div.classList.add('delay-item');
       div.dataset.seconds = item.seconds || 0;
       div.dataset.duration = item.seconds || 0;
-      div.innerHTML = '<div class="label">⏱️ Delay</div><div class="meta">' + (item.seconds ? (item.seconds.toFixed(1) + 's') : '') + '</div>';
+      div.innerHTML = '<div class="label">⏱️ Delay</div><div class="meta">' + (item.seconds ? (item.seconds.toFixed(1) + 's') : '') + '</div><div class="resize-handle" title="Resize delay"></div>';
     }
     if (item.start !== undefined) div.dataset.start = item.start;
     return div;
@@ -307,16 +351,53 @@ async def index(request):
       });
       totalSeconds = Math.max(totalSeconds, 30);
 
-      const pps = Math.max(8, Math.min(80, Math.round((Math.max(400, 600) / totalSeconds))));
+      // choose pixels-per-second based on viewport to use more screen real estate
+      const availableWidth = Math.max(window.innerWidth * 0.85, 900);
+      let pps = Math.max(4, Math.min(200, Math.round(availableWidth / totalSeconds)));
 
       const timelineContainer = document.createElement('div');
       timelineContainer.className = 'timeline-container';
       timelineContainer.style.cssText = 'background: linear-gradient(90deg, rgba(255,255,255,0.01), rgba(255,255,255,0.01)); padding:8px; border-radius:6px;';
 
       // ruler
-      const ruler = makeRuler(Math.ceil(totalSeconds+1), pps);
-      ruler.style.width = (Math.max(400, Math.round(totalSeconds * pps)) + 60) + 'px';
+      let ruler = makeRuler(Math.ceil(totalSeconds+1), pps);
+      const totalPx = Math.max(Math.round(totalSeconds * pps), Math.round(availableWidth));
+      ruler.style.width = (totalPx + 120) + 'px';
+
+      // add zoom controls and helper to update scale
+      const zoomControls = document.createElement('div');
+      zoomControls.className = 'zoom-controls';
+      zoomControls.innerHTML = '<button type="button" class="btn btn-secondary zoom-out">−</button><div class="zoom-level">' + pps + ' px/s</div><button type="button" class="btn btn-secondary zoom-in">+</button>';
+      timelineContainer.appendChild(zoomControls);
+
       timelineContainer.appendChild(ruler);
+      // set container width to occupy more screen real estate
+      timelineContainer.style.maxWidth = '100%'; timelineContainer.style.overflowX = 'auto';
+
+      function updateScale(newPps) {
+        pps = Math.max(4, Math.min(400, Math.round(newPps)));
+        // rebuild ruler
+        const oldW = parseInt(ruler.style.width||0);
+        ruler.remove();
+        ruler = makeRuler(Math.ceil(totalSeconds+1), pps);
+        const totalPx = Math.max(Math.round(totalSeconds * pps), Math.round(availableWidth));
+        ruler.style.width = (totalPx + 120) + 'px';
+        // insert ruler at top of container (zoomControls is before it)
+        timelineContainer.insertBefore(ruler, timelineContainer.querySelector('.timeline-lane'));
+        // update blocks width/left
+        Array.from(lane.querySelectorAll('.timeline-item')).forEach(function(b) {
+          const start = parseFloat(b.dataset.start || 0);
+          const dur = parseFloat(b.dataset.duration || 0);
+          b.style.left = timeToPx(start, pps) + 'px';
+          b.style.width = Math.max(40, Math.round(dur * pps)) + 'px';
+        });
+        // update zoom label
+        zoomControls.querySelector('.zoom-level').textContent = pps + ' px/s';
+      }
+
+      // wire zoom buttons
+      zoomControls.querySelector('.zoom-in').addEventListener('click', function(){ updateScale(Math.round(pps * 1.25)); });
+      zoomControls.querySelector('.zoom-out').addEventListener('click', function(){ updateScale(Math.round(pps / 1.25)); });
 
       // single-row timeline (left-to-right) that snaps blocks together
       const lane = document.createElement('div');
@@ -389,6 +470,8 @@ async def index(request):
       // dragging (pointer events) for moving horizontally in single row
       let dragging = null;
       function onPointerDown(e) {
+        // don't start a drag if we began on a resize handle
+        if (e.target.closest('.resize-handle')) return;
         const block = e.target.closest('.timeline-item');
         if (!block) return;
         dragging = { block: block, startX: e.clientX, origLeft: parseInt(block.style.left||0) };
@@ -417,7 +500,47 @@ async def index(request):
         dragging = null;
         // Now reflow all blocks so they sit adjacent
         reflow();
+        // persist moved order
+        savePlaylist();
       }
+
+      // Resizing for delay blocks
+      let resizing = null;
+      function onResizePointerDown(e) {
+        const handle = e.target.closest('.resize-handle');
+        if (!handle) return;
+        const block = handle.closest('.timeline-item');
+        if (!block || block.dataset.type !== 'delay') return;
+        resizing = { handle: handle, block: block, startX: e.clientX, origWidth: parseInt(block.style.width||0) };
+        if (e.pointerId) handle.setPointerCapture(e.pointerId);
+        block.style.transition = 'none';
+        e.stopPropagation();
+      }
+      function onResizePointerMove(e) {
+        if (!resizing) return;
+        const dx = e.clientX - resizing.startX;
+        const newWidth = Math.max(40, resizing.origWidth + dx);
+        const newSecs = Math.round(pxToTime(newWidth, pps) * 10) / 10.0;
+        resizing.block.dataset.seconds = newSecs;
+        resizing.block.dataset.duration = newSecs;
+        resizing.block.querySelector('.meta').textContent = newSecs.toFixed(1) + 's';
+        resizing.block.style.width = newWidth + 'px';
+      }
+      function onResizePointerUp(e) {
+        if (!resizing) return;
+        const handle = resizing.handle;
+        const block = resizing.block;
+        if (e.pointerId) handle.releasePointerCapture(e.pointerId);
+        block.style.transition = '';
+        resizing = null;
+        // reflow blocks and persist the updated seconds
+        reflow();
+        savePlaylist();
+      }
+
+      timelineContainer.addEventListener('pointerdown', function(e) { onPointerDown(e); onResizePointerDown(e); });
+      window.addEventListener('pointermove', function(e) { onPointerMove(e); onResizePointerMove(e); });
+      window.addEventListener('pointerup', function(e) { onPointerUp(e); onResizePointerUp(e); });
 
       timelineContainer.addEventListener('pointerdown', function(e) { onPointerDown(e); });
       window.addEventListener('pointermove', function(e) { onPointerMove(e); });
@@ -455,16 +578,18 @@ async def index(request):
         const block = createBlock({type:'delay', seconds:1.0});
         placeBlock(block, last || 0);
         reflow();
+        // persist new delay
+        savePlaylist();
       });
 
       // file upload handler adds block to lane 0 end
       const fileInput = form.querySelector('.upload-input');
       fileInput.addEventListener('change', function() {
         if (!this.files.length) return;
-        const file = this.files[0];
+        const files = Array.from(this.files);
         const formData = new FormData();
         formData.append('guest_id', guestId);
-        formData.append('file', file);
+        files.forEach(f => formData.append('file', f));
         fetch('/upload', { method: 'POST', body: formData, headers: { 'Accept': 'application/json' } })
         .then(resp => {
           if (!resp.ok) throw new Error('Upload failed (HTTP ' + resp.status + ')');
@@ -473,29 +598,42 @@ async def index(request):
           return resp.text().then(t => { throw new Error('Unexpected non-JSON response'); });
         })
         .then(data => {
-          if (data && data.status === 'ok') {
-            // place at end of single lane
+          if (data && data.status === 'ok' && Array.isArray(data.files)) {
+            // place each file in selection order at end of timeline
+            let last = Array.from(lane.children).reduce((m,b)=>Math.max(m, parseFloat(b.dataset.start||0) + parseFloat(b.dataset.duration||0)), 0);
+            data.files.forEach(function(finfo) {
+              const block = createBlock({type:'track', track:finfo.filename, duration:finfo.duration || 0});
+              placeBlock(block, last || 0);
+              last = Math.max(last, parseFloat(block.dataset.start||0) + parseFloat(block.dataset.duration||0));
+            });
+            // ensure blocks snap adjacent after insertion
+            reflow();
+            // auto-save updated timeline to server so server playlist reflects the uploaded tracks immediately
+            savePlaylist();
+          } else if (data && data.status === 'ok' && data.filename) {
+            // backward-compat single-file response
             const last = Array.from(lane.children).reduce((m,b)=>Math.max(m, parseFloat(b.dataset.start||0) + parseFloat(b.dataset.duration||0)), 0);
             const block = createBlock({type:'track', track:data.filename, duration:data.duration || 0});
             placeBlock(block, last || 0);
-            // ensure blocks snap adjacent after insertion
-            reflow();
-            // auto-save updated timeline to server so server playlist reflects the uploaded track immediately
-            const items = [];
-            Array.from(lane.children).forEach(function(b) {
-              const start = parseFloat(b.dataset.start || 0);
-              if (b.dataset.type === 'track') items.push({ type:'track', track:b.dataset.track, start:start, duration: parseFloat(b.dataset.duration||0) });
-              else items.push({ type:'delay', start:start, seconds: parseFloat(b.dataset.seconds||0) });
-            });
-            items.sort((a,b)=> (a.start||0) - (b.start||0));
-            fetch('/playlist', { method: 'POST', headers:{ 'Content-Type': 'application/json', 'Accept': 'application/json' }, body: JSON.stringify({ guest_id: guestId, playlist: items }) })
-            .then(r=> { if (!r.ok) console.warn('Failed to auto-save playlist after upload'); })
-            .catch(e=> console.warn('Playlist auto-save error', e));
+            reflow(); savePlaylist();
           } else alert('Upload failed');
         })
         .catch((err) => alert('Upload error: ' + (err && err.message ? err.message : 'Network error')))
         .finally(() => { this.value = ''; });
       });
+
+      function savePlaylist() {
+        const items = [];
+        Array.from(lane.children).forEach(function(block) {
+          const start = parseFloat(block.dataset.start || 0);
+          if (block.dataset.type === 'track') items.push({ type:'track', track:block.dataset.track, start:start, duration: parseFloat(block.dataset.duration||0) });
+          else items.push({ type:'delay', start:start, seconds: parseFloat(block.dataset.seconds||0) });
+        });
+        items.sort((a,b)=> (a.start||0) - (b.start||0));
+        fetch('/playlist', { method:'POST', headers:{ 'Content-Type': 'application/json', 'Accept': 'application/json' }, body: JSON.stringify({ guest_id: guestId, playlist: items }) })
+        .then(r=> { if (!r.ok) console.warn('Failed to save playlist'); })
+        .catch(e=> console.warn('Save playlist error', e));
+      }
 
       // Save handler: gather all blocks in the single lane, convert to playlist items with start times
       form.addEventListener('submit', function(e) {
@@ -513,8 +651,8 @@ async def index(request):
         .catch(() => alert('Network error'));
       });
 
-      // set container width based on totalSeconds
-      timelineContainer.style.width = (Math.max(400, Math.round(totalSeconds * pps)) + 80) + 'px';
+      // ensure container respects CSS and does not overflow the page
+      timelineContainer.style.maxWidth = '100%';
     });
   });
 </script>
@@ -569,9 +707,15 @@ async def upload_handler(request):
     # First form field: guest ID
     field = await reader.next()
     guest_id = (await field.text()).strip()
-    # Next form field: file
-    field = await reader.next()
-    if field.name == 'file':
+    # Process any number of file parts (support multi-file upload)
+    files_added = []
+    while True:
+        field = await reader.next()
+        if field is None:
+            break
+        if field.name != 'file':
+            # skip unexpected fields
+            continue
         # use original filename, replace spaces with underscores
         original_fname = field.filename or 'track'
         safe_fname = original_fname.replace(' ', '_')
@@ -587,6 +731,7 @@ async def upload_handler(request):
         # add to guest playlist (track row followed by delay row)
         PLAYLISTS.setdefault(guest_id, []).append({'type': 'track', 'track': safe_fname})
         PLAYLISTS[guest_id].append({'type': 'delay', 'seconds': 0.0})
+        files_added.append({'filename': safe_fname, 'duration': get_track_duration(safe_fname)})
         # push file to client via SFTP if connected
         ip = client_addrs.get(guest_id)
         install_dir = client_paths.get(guest_id, '')
@@ -609,13 +754,12 @@ async def upload_handler(request):
                 print(f"[{format_time(time.time())}] Pushed file to client {guest_id} at {ip}:{remote_path}")
             except Exception as e:
                 print(f"Failed to push file to client {guest_id}: {e}")
-        # Return JSON for AJAX requests, include duration so the UI can size the timeline
-        sec_fetch = request.headers.get('Sec-Fetch-Mode')
-        xreq = request.headers.get('X-Requested-With', '')
-        accept = request.headers.get('Accept', '')
-        if 'application/json' in accept or xreq == 'XMLHttpRequest' or sec_fetch is not None:
-            duration = get_track_duration(safe_fname)
-            return web.json_response({'status': 'ok', 'filename': safe_fname, 'duration': duration})
+    # Return JSON for AJAX requests, include durations so the UI can size the timeline
+    sec_fetch = request.headers.get('Sec-Fetch-Mode')
+    xreq = request.headers.get('X-Requested-With', '')
+    accept = request.headers.get('Accept', '')
+    if 'application/json' in accept or xreq == 'XMLHttpRequest' or sec_fetch is not None:
+        return web.json_response({'status': 'ok', 'files': files_added})
     return web.HTTPFound('/')
 
 async def start_handler(request):
