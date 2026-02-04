@@ -17,6 +17,7 @@ from pathlib import Path
 import websockets
 import RPi.GPIO as GPIO  # type: ignore
 import re
+import urllib.request
 
 # CONFIGURATION
 SERVER_URI = 'ws://willowcrestmanor.local:8765'  # default server URI, can be overridden by --server argument
@@ -135,6 +136,20 @@ async def send_registration(ws, guest_id):
     await ws.send(json.dumps(msg))
     print(f"Registered with master as guest {guest_id}")
 
+def download_track(track_file):
+    """Download track from server HTTP audio endpoint"""
+    try:
+        # Construct HTTP URL from SERVER_URI
+        base = SERVER_URI.replace('ws://', 'http://').rstrip('/ws')
+        url = f"{base}/audio/{track_file}"
+        dest = AUDIO_DIR / track_file
+        print(f"Downloading track from {url} to {dest}")
+        AUDIO_DIR.mkdir(parents=True, exist_ok=True)
+        urllib.request.urlretrieve(url, dest)
+        print(f"Downloaded {track_file}")
+    except Exception as e:
+        print(f"Failed to download {track_file}: {e}")
+
 async def schedule_play(track_file, timestamp, offset):
     now = time.time() + LOCAL_OFFSET
     delay = timestamp - now
@@ -145,8 +160,10 @@ async def schedule_play(track_file, timestamp, offset):
     await asyncio.sleep(delay)
     path = AUDIO_DIR / track_file
     if not path.exists():
-        print(f"Error: track {path} not found.")
-        return
+        download_track(track_file)
+        if not path.exists():
+            print(f"Error: track {path} not found.")
+            return
     cmd = [
         'mpv', '--no-video', '--really-quiet',
         f'--start={offset}', str(path)

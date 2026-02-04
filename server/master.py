@@ -16,6 +16,7 @@ from aiohttp import web
 import aiohttp
 import socket
 from zeroconf import Zeroconf, ServiceInfo
+import subprocess
 
 # CONFIGURATION
 def _get_local_ip():
@@ -39,6 +40,7 @@ PLAYLIST = {          # guest_id: track_filename
 }
 
 clients = {}  # guest_id -> websocket connection
+client_addrs = {}  # guest_id -> client IP address
 
 async def register(websocket):
     """Register new client by guest_id header"""
@@ -82,7 +84,8 @@ async def start_show():
             'timestamp': t0,
             'offset': 0.0
         }
-        await ws.send(json.dumps(cmd))
+        # send JSON via aiohttp WebSocketResponse
+        await ws.send_json(cmd)
     print("PLAY commands dispatched.")
 
 def signal_handler(sig, frame):
@@ -143,28 +146,8 @@ async def index(request):
     html += '</div></body></html>'
     return web.Response(text=html, content_type='text/html')
 
-async def upload_handler(request):
-    reader = await request.multipart()
-    field = await reader.next()
-    guest_id = (await field.text()).strip()
-    field = await reader.next()
-    if field.name == 'file':
-        fname = f'{guest_id}.mp3'
-        path = AUDIO_DIR / fname
-        with open(path, 'wb') as f:
-            while True:
-                chunk = await field.read_chunk()
-                if not chunk:
-                    break
-                f.write(chunk)
-        PLAYLIST[guest_id] = fname
-    return web.HTTPFound('/')
-
-async def start_handler(request):
-    await start_show()
-    return web.HTTPFound('/')
-
 async def ws_handler(request):
+    # WebSocket handler: support time sync and client registration
     ws = web.WebSocketResponse()
     await ws.prepare(request)
     # register
@@ -173,15 +156,57 @@ async def ws_handler(request):
     gid = data.get('guest_id')
     if gid:
         clients[gid] = ws
+        # record client IP address for SCP
+        client_addrs[gid] = request.remote
     try:
         async for msg in ws:
+            try:
+                data = json.loads(msg.data)
+            except Exception:
+                continue
+            # Handle time sync requests from clients
+            if data.get('type') == 'TIME_REQUEST':
+                reply = {'type': 'TIME_REPLY', 'server_time': time.time()}
+                await ws.send_json(reply)
+                continue
+            # Ignore other messages
             pass
     finally:
         clients.pop(gid, None)
+        client_addrs.pop(gid, None)
     return ws
+
+async def upload_handler(request):
+    reader = await request.multipart()
+    field = await reader.next()
+    guest_id = (await field.text()).strip()
+    field = await reader.next()
+    if field.name == 'file':
+        fname = f'{guest_id}.mp3'
+        path = AUDIO_DIR / fname
+        # save file locally
+        with open(path, 'wb') as f:
+            while True:
+                chunk = await field.read_chunk()
+                if not chunk:
+                    break
+                f.write(chunk)
+        PLAYLIST[guest_id] = fname
+        # push file to client via SCP if connected
+        ip = client_addrs.get(guest_id)
+        if ip:
+            client_path = f'pi@{ip}:/home/pi/audio_sync_glasses/client/audio/{fname}'
+            subprocess.run(['scp', str(path), client_path], check=False)
+    return web.HTTPFound('/')
+
+async def start_handler(request):
+    await start_show()
+    return web.HTTPFound('/')
 
 # setup aiohttp app
 app = web.Application()
+# Add static route for audio files
+app.router.add_static('/audio/', path=str(AUDIO_DIR), name='audio')
 app.router.add_get('/', index)
 app.router.add_post('/upload', upload_handler)
 app.router.add_post('/start', start_handler)
