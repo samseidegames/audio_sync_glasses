@@ -228,15 +228,22 @@ def main():
     # auto-pair/connect glasses if needed
     ensure_paired_connection()
 
-    # start PulseAudio and configure Bluetooth audio
-    subprocess.run(['pulseaudio', '--start'], check=False)
-    subprocess.run(['pactl', 'load-module', 'module-bluetooth-discover'], check=False)
-    subprocess.run(['pactl', 'load-module', 'module-bluetooth-policy'], check=False)
-    mac = load_paired_mac()
-    if mac:
-        sink = f'bluez_sink.{mac.replace(":", "_")}.a2dp_sink'
-        print(f'Setting default PulseAudio sink: {sink}')
-        subprocess.run(['pactl', 'set-default-sink', sink], check=False)
+    # start PulseAudio and configure Bluetooth audio if not running as root
+    import os
+    if os.geteuid() != 0:
+        try:
+            subprocess.run(['pulseaudio', '--start'], check=False)
+            subprocess.run(['pactl', 'load-module', 'module-bluetooth-discover'], check=False)
+            subprocess.run(['pactl', 'load-module', 'module-bluetooth-policy'], check=False)
+            mac = load_paired_mac()
+            if mac:
+                sink = f'bluez_sink.{mac.replace(":", "_")}.a2dp_sink'
+                print(f'Setting default PulseAudio sink: {sink}')
+                subprocess.run(['pactl', 'set-default-sink', sink], check=False)
+        except Exception as e:
+            print(f"PulseAudio setup skipped: {e}")
+    else:
+        print("PulseAudio setup skipped: running as root; use pi user session for audio output.")
 
     # setup discovery button
     setup_button()

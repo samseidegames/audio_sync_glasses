@@ -87,8 +87,8 @@ sudo systemctl start openntpd
 ## 6. Running the Client
 ```bash
 source .venv/bin/activate
-# Run as root (with sudo) to allow GPIO access for button support
-sudo python3 puck.py --guest-id 1 --server ws://<MASTER_IP>:8080/ws
+# Run as pi user (without sudo) to allow PulseAudio access and GPIO support
+python3 puck.py --guest-id 1 --server ws://<MASTER_IP>:8080/ws
 ```
 
 ## 7. Button for Pairing
