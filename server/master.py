@@ -245,7 +245,7 @@ async def index(request):
             '.timeline-item .label[title]:hover { text-decoration:underline; }'
             '.timeline-item .meta { font-size:11px; color:#9aa4ad; margin-left:8px; }'
             '.resize-handle { position:absolute; right:6px; top:50%; transform:translateY(-50%); width:10px; height:56%; background:rgba(255,255,255,0.06); border-radius:4px; cursor:ew-resize; }'
-            '.zoom-controls { position:absolute; right:12px; top:6px; display:flex; gap:6px; align-items:center; }'
+            '.zoom-controls { position:absolute; right:12px; top:6px; display:flex; gap:6px; align-items:center; display:none; }'
             '.zoom-controls .btn { padding:6px 10px; font-size:12px; }'
             '.zoom-level { color:#8b949e; font-size:12px; padding:4px 8px; }'
             '</style>'
@@ -360,16 +360,18 @@ async def index(request):
       // position relative so absolute-positioned controls (zoom) are placed per-timeline
       timelineContainer.style.cssText = 'position:relative; background: linear-gradient(90deg, rgba(255,255,255,0.01), rgba(255,255,255,0.01)); padding:8px; border-radius:6px;';
 
-      // ruler
       let ruler = makeRuler(Math.ceil(totalSeconds+1), pps);
       const totalPx = Math.max(Math.round(totalSeconds * pps), Math.round(availableWidth));
       ruler.style.width = (totalPx + 120) + 'px';
 
-      // add zoom controls and helper to update scale
+      // Add zoom controls to the btn-group (below the timeline)
+      const btnGroup = form.querySelector('.btn-group');
+      const initialZoomMultiplier = (pps / 4).toFixed(2);
       const zoomControls = document.createElement('div');
       zoomControls.className = 'zoom-controls';
-      zoomControls.innerHTML = '<button type="button" class="btn btn-secondary zoom-out">−</button><div class="zoom-level">' + pps + ' px/s</div><button type="button" class="btn btn-secondary zoom-in">+</button>';
-      timelineContainer.appendChild(zoomControls);
+      zoomControls.style.cssText = 'position:static; gap:8px; margin-left:auto; display:flex; align-items:center;';
+      zoomControls.innerHTML = '<button type="button" class="btn btn-secondary zoom-out">−</button><div class="zoom-level">Zoom: ' + initialZoomMultiplier + 'x</div><button type="button" class="btn btn-secondary zoom-in">+</button>';
+      btnGroup.appendChild(zoomControls);
 
       timelineContainer.appendChild(ruler);
       // set container width to occupy more screen real estate
@@ -394,8 +396,9 @@ async def index(request):
           b.style.left = timeToPx(start, pps) + 'px';
           b.style.width = Math.max(40, Math.round(dur * pps)) + 'px';
         });
-        // update zoom label
-        zoomControls.querySelector('.zoom-level').textContent = pps + ' px/s';
+        // update zoom label with multiplier format
+        const zoomMult = (pps / 4).toFixed(2);
+        zoomControls.querySelector('.zoom-level').textContent = 'Zoom: ' + zoomMult + 'x';
       }
 
       // wire zoom buttons

@@ -144,7 +144,11 @@ async def sync_clock(samples: int = 5, timeout: float = 2.0, delay_between: floa
         chosen = (offsets[mid - 1] + offsets[mid]) / 2.0
 
     LOCAL_OFFSET = chosen
-    print(f"Time sync complete: LOCAL_OFFSET set to {LOCAL_OFFSET:.6f} s (based on {len(offsets)} samples)")
+    # Format offset as HH:MM:SS for display
+    offset_hours = int(LOCAL_OFFSET // 3600)
+    offset_mins = int((LOCAL_OFFSET % 3600) // 60)
+    offset_secs = LOCAL_OFFSET % 60
+    print(f"Time sync complete: LOCAL_OFFSET set to {offset_hours:02d}:{offset_mins:02d}:{offset_secs:06.3f} (based on {len(offsets)} samples)")
 
 async def send_registration(ws, guest_id):
     # include client installation directory for file uploads
@@ -192,7 +196,10 @@ async def schedule_play(track_file, timestamp, offset):
     now = time.time() + LOCAL_OFFSET
     delay = timestamp - now
     if delay < 0:
-        print(f"[{format_time(time.time())}] Missed start by {-delay:.3f}s, playing immediate with offset adjustment.")
+        delay_hours = int((-delay) // 3600)
+        delay_mins = int(((-delay) % 3600) // 60)
+        delay_secs = (-delay) % 60
+        print(f"[{format_time(time.time())}] Missed start by {delay_hours:02d}:{delay_mins:02d}:{delay_secs:06.3f}, playing immediate with offset adjustment.")
         offset += -delay
         delay = 0
     await asyncio.sleep(delay)
@@ -225,7 +232,11 @@ async def schedule_play(track_file, timestamp, offset):
         duration = get_track_duration(track_file)
     remaining = max(0.0, duration - offset)
     finished_time = timestamp + remaining
-    print(f"[{format_time(finished_time)}] Playback finished for {track_file} (duration: {duration:.1f}s, offset: {offset:.1f}s)")
+    # Format durations as HH:MM:SS
+    dur_hours = int(duration // 3600)
+    dur_mins = int((duration % 3600) // 60)
+    dur_secs = duration % 60
+    print(f"[{format_time(finished_time)}] Playback finished for {track_file} (duration: {dur_hours:02d}:{dur_mins:02d}:{dur_secs:06.3f}, offset: {offset:.1f}s)")
     last_expected_end_time = finished_time
     # if there is a next scheduled play, compute delay and report
     next_item = None
@@ -248,13 +259,21 @@ async def handle_command(cmd):
         timestamp = float(cmd['timestamp'])
         offset = float(cmd.get('offset', 0.0))
         duration = float(cmd.get('duration', 0.0))
+        # Format duration for log output as HH:MM:SS
+        dur_hours = int(duration // 3600)
+        dur_mins = int((duration % 3600) // 60)
+        dur_secs = duration % 60
         # compute expected finish for this item
         expected_finish = timestamp + duration
         # Log scheduled gap vs previous expected end
         global scheduled_queue, last_expected_end_time
         if last_expected_end_time is not None and timestamp > last_expected_end_time + 0.001:
             gap = timestamp - last_expected_end_time
-            print(f"[{format_time(time.time())}] Scheduled delay of {gap:.1f}s before {track}")
+            # Format gap as HH:MM:SS
+            gap_hours = int(gap // 3600)
+            gap_mins = int((gap % 3600) // 60)
+            gap_secs = gap % 60
+            print(f"[{format_time(time.time())}] Scheduled delay of {gap_hours:02d}:{gap_mins:02d}:{gap_secs:06.3f} before {track}")
         # add to scheduled queue (keep sorted) and include duration
         scheduled_queue.append({'track': track, 'timestamp': timestamp, 'offset': offset, 'duration': duration})
         scheduled_queue.sort(key=lambda x: x['timestamp'])
@@ -269,8 +288,10 @@ async def handle_command(cmd):
         async def log_playlist_complete(at_ts):
             now = time.time() + LOCAL_OFFSET
             delay = at_ts - now
-            if delay > 0:
-                await asyncio.sleep(delay)
+            # wait for all scheduled playback tasks to complete
+            while scheduled_queue:
+                await asyncio.sleep(0.1)
+            # Now all playback is done; log playlist complete
             print(f"[{format_time(at_ts)}] Playlist Complete")
         asyncio.create_task(log_playlist_complete(ts))
     elif ctype == 'SHOW_COMPLETE':
@@ -278,8 +299,10 @@ async def handle_command(cmd):
         async def log_show_complete(at_ts):
             now = time.time() + LOCAL_OFFSET
             delay = at_ts - now
-            if delay > 0:
-                await asyncio.sleep(delay)
+            # wait for all scheduled playback tasks to complete
+            while scheduled_queue:
+                await asyncio.sleep(0.1)
+            # Now all playback is done; log show complete
             print(f"[{format_time(at_ts)}] Show Complete")
         asyncio.create_task(log_show_complete(ts))
     else:
