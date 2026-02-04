@@ -222,39 +222,47 @@ async def schedule_play(track_file, timestamp, offset):
         if not path.exists():
             print(f"[{format_time(time.time())}] Error: track {path} not found.")
             return
-    # Use mpg123 for lightweight WAV playback with direct ALSA output
-    # Format: mpg123 -f <output_buffer_size> -a <alsa_device> [--offset <ms>] <file>
-    # For offset in seconds, convert to milliseconds for mpg123's --seek option
-    seek_ms = int(offset * 1000) if offset > 0 else 0
+    # Use aplay for lightweight WAV playback on Raspberry Pi (preferred for WAV)
+    # Falls back to paplay (PulseAudio) or mpv if aplay unavailable
     
-    # Try mpg123 first (lightweight, optimized for pi zero)
+    # Try aplay first (native ALSA, works best for WAV on Pi)
+    cmd = None
+    player = None
+    
+    # Check which player is available
     try:
-        if seek_ms > 0:
+        subprocess.run(['which', 'aplay'], capture_output=True, check=True, timeout=2)
+        # aplay is available - use it for WAV playback
+        cmd = ['aplay', str(path)]
+        player = 'aplay'
+        print(f"[{format_time(time.time())}] Starting playback (aplay): {track_file}")
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        # aplay not available, try paplay
+        try:
+            subprocess.run(['which', 'paplay'], capture_output=True, check=True, timeout=2)
             cmd = [
-                'nice', '-n', '-10',  # High priority
-                'mpg123', '-f', '2048', '-a', 'default', '--seek', str(seek_ms), str(path)
+                'paplay', '--device=default', str(path)
             ]
-        else:
+            player = 'paplay'
+            print(f"[{format_time(time.time())}] Starting playback (paplay): {track_file}")
+        except (subprocess.CalledProcessError, FileNotFoundError):
+            # Fall back to mpv
             cmd = [
-                'nice', '-n', '-10',  # High priority
-                'mpg123', '-f', '2048', '-a', 'default', str(path)
+                'mpv', '--no-video', '--really-quiet', '--audio-device=default',
+                '--cache=no', f'--start={offset}', str(path)
             ]
-        print(f"[{format_time(time.time())}] Starting playback (mpg123): {track_file} (offset {offset}s)")
-    except Exception as e:
-        # Fallback to mpv if mpg123 unavailable
-        print(f"[{format_time(time.time())}] mpg123 unavailable ({e}), falling back to mpv")
-        cmd = [
-            'mpv', '--no-video', '--really-quiet', '--audio-device=default',
-            '--cache=no', f'--start={offset}', str(path)
-        ]
-        print(f"[{format_time(time.time())}] Starting playback (mpv): {track_file} (offset {offset}s)")
+            player = 'mpv'
+            print(f"[{format_time(time.time())}] Starting playback (mpv): {track_file} (offset {offset}s)")
     
     # start actual playback and track active plays
     start_actual = time.time() + LOCAL_OFFSET
     global active_plays
     active_plays += 1
     try:
-        proc = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        # Capture stderr to see audio errors
+        with open('/tmp/audio_playback.log', 'a') as log:
+            log.write(f"[{format_time(start_actual)}] Starting {player} with cmd: {cmd}\n")
+        proc = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True)
     except Exception as e:
         print(f"[{format_time(time.time())}] Error starting playback: {e}")
         active_plays -= 1
@@ -273,6 +281,11 @@ async def schedule_play(track_file, timestamp, offset):
 
     # wait for playback process to complete
     await asyncio.get_running_loop().run_in_executor(None, proc.wait)
+    _, stderr = proc.communicate()
+    if stderr:
+        with open('/tmp/audio_playback.log', 'a') as log:
+            log.write(f"[{format_time(time.time())}] Audio player stderr: {stderr}\n")
+        print(f"[{format_time(time.time())}] Audio player error output: {stderr}")
     end_actual = time.time() + LOCAL_OFFSET
     # compute duration (fallback if server didn't provide)
     if duration is None or duration == 0:
