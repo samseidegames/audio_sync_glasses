@@ -19,7 +19,7 @@ Instructions for setting up each Raspberry Pi Zero W v1.1 or Zero 2 W as an audi
   ```
   Then reboot or run `sudo wpa_cli -i wlan0 reconfigure` to apply.
 - Wi-Fi credentials for control network
-- MPV media player installed
+- MPV media player installed (aplay/paplay/mpv used for playback)
 
 ## 1. System Update & Dependencies
 ```bash
@@ -32,6 +32,8 @@ sudo apt install -y python3 python3-venv python3-pip mpv bluetooth bluez bluez-t
 cd ~/audio_sync_glasses/client
 sudo bash install_client.sh <guest_id>
 ```
+
+The install script now applies Bluetooth firmware tweaks for Pi Zero W / Zero 2 W to reduce audio dropouts. If the model can't be detected, it will prompt you to choose which device type it's running on.
 
 ## 3. Bluetooth Pairing (One-time)
 1. Enable pairing mode on puck:
@@ -72,7 +74,7 @@ Note: the server (master) always runs on a Raspberry Pi 5. The server web UI (ht
 5. Label the puck & glasses (e.g., Guest 1).
 
 ## 4. Directory Structure
-- `audio/` – Place per-guest MP3 files named `<guest_id>.mp3` or upload from master.
+- `audio/` – Stores per-guest WAV files (uploaded and converted by the master).
 - `puck.py` – Main client script.
 - `requirements.txt` – Python dependencies.
 
@@ -90,6 +92,22 @@ source .venv/bin/activate
 # Run as pi user (without sudo) to allow PulseAudio access and GPIO support
 python3 puck.py --guest-id 1 --server ws://<MASTER_IP>:8080/ws
 ```
+
+## 7. Bluetooth Firmware Tweaks (manual)
+If you need to apply the Bluetooth audio stability settings manually:
+- Pi Zero W: edit /lib/firmware/brcm/brcmfmac43430-sdio.raspberrypi,model-zero-w.txt
+- Pi Zero 2 W: edit /lib/firmware/brcm/brcmfmac43430b0-sdio.raspberrypi,model-zero-2-w.txt
+
+Comment out:
+- btc_mode=1
+- btc_params8=0x4e20
+- btc_params1=0x7530
+
+Add:
+- btc_mode=5
+- btc_params8=5000
+- btc_params9=40000
+- btc_params50=0x2000
 
 ## 7. Button for Pairing
 Press the physical button (GPIO17) on the puck to re-enable Bluetooth discovery mode.

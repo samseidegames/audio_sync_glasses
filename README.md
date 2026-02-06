@@ -2,7 +2,7 @@
 
 This repository contains the code and setup scripts for a **synchronized personal audio system** used in the Willowcrest Manor immersive dining experience.  
 
-Guests wear Bluetooth audio glasses paired to a small Raspberry Pi "puck".  A central Master controller schedules and issues timestamped play/stop/fade commands to each puck over the LAN.  Each puck streams private MP3 audio to its paired glasses, ensuring group-wide synchronization (±20 ms).
+Guests wear Bluetooth audio glasses paired to a small Raspberry Pi "puck". A central Master controller schedules and issues timestamped play commands to each puck over the LAN. Each puck stores WAV files locally and plays them via a lightweight player stack (aplay → paplay → mpv), ensuring group-wide synchronization (±20 ms).
 
 ## Repository Layout
 
@@ -20,10 +20,11 @@ Guests wear Bluetooth audio glasses paired to a small Raspberry Pi "puck".  A ce
 
 ## Key Features
 
-- **Local audio playback**: Each puck stores MP3 files locally and uses MPV for precise seeks and fades
-- **Timestamped scheduling**: Master issues commands with absolute timestamps; pucks align via NTP/PTP
+- **Local audio playback**: Each puck stores WAV files locally and uses aplay/paplay/mpv for reliable output on Pi Zero
+- **Timestamped scheduling**: Master issues commands with absolute timestamps; pucks align via time sync and drift checks
 - **Auto-pairing & persistence**: Pucks scan and pair to the first discoverable glasses; remember MAC across reboots
-- **Web-based control**: Staff never touch menus — just upload tracks in the browser and click "GO"
+- **Web-based control**: The themed UI includes a drag-and-drop timeline and a single COMMENCE button
+- **Bluetooth stability tweaks**: Client install can apply Pi Zero firmware settings to reduce audio dropouts
 
 ## Getting Started
 - **Master** (Windows or Linux): Clone the repo and follow the platform-specific instructions below.  

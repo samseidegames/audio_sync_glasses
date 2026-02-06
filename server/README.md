@@ -56,7 +56,8 @@ python3 master.py
 1. Open the browser UI.  
 2. Verify connected guests appear under **Connected Guests**.  
 3. Upload and assign MP3 tracks per guest.  
-4. Press **GO** to schedule synchronized playback.
+4. Arrange items on the timeline as needed.  
+5. Press **COMMENCE** to schedule synchronized playback.
 
 ## 7. (Optional) Autostart Service
 Create a systemd service to run `master.py` on boot:

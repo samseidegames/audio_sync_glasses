@@ -26,6 +26,67 @@ echo
 apt update && apt upgrade -y
 apt install -y python3 python3-venv python3-pip mpv bluetooth bluez bluez-tools wpasupplicant openntpd python3-rpi.gpio pulseaudio pulseaudio-utils pulseaudio-module-bluetooth
 
+# Apply Bluetooth firmware tweaks for Pi Zero W / Zero 2 W to reduce audio dropouts
+detect_model() {
+  if [[ -f /proc/device-tree/model ]]; then
+    tr -d '\0' < /proc/device-tree/model
+  else
+    echo ""
+  fi
+}
+
+apply_bt_tweaks() {
+  local fw_file="$1"
+  if [[ -z "$fw_file" || ! -f "$fw_file" ]]; then
+    echo "Bluetooth firmware file not found, skipping tweaks."
+    return
+  fi
+
+  echo "Applying Bluetooth firmware tweaks to $fw_file"
+  cp -n "$fw_file" "${fw_file}.bak" || true
+
+  # Comment out legacy settings if present
+  sed -i \
+    -e 's/^btc_mode=/#btc_mode=/' \
+    -e 's/^btc_params8=/#btc_params8=/' \
+    -e 's/^btc_params1=/#btc_params1=/' \
+    -e 's/^btc_params9=/#btc_params9=/' \
+    -e 's/^btc_params50=/#btc_params50=/' \
+    "$fw_file"
+
+  # Append preferred settings
+  cat <<'EOF' >> "$fw_file"
+btc_mode=5
+btc_params8=5000
+btc_params9=40000
+btc_params50=0x2000
+EOF
+
+  echo "Bluetooth firmware tweaks applied. A reboot is recommended."
+}
+
+MODEL=$(detect_model)
+FW_ZERO_W="/lib/firmware/brcm/brcmfmac43430-sdio.raspberrypi,model-zero-w.txt"
+FW_ZERO_2_W="/lib/firmware/brcm/brcmfmac43430b0-sdio.raspberrypi,model-zero-2-w.txt"
+
+if [[ "$MODEL" == *"Zero 2"* ]]; then
+  apply_bt_tweaks "$FW_ZERO_2_W"
+elif [[ "$MODEL" == *"Zero W"* ]]; then
+  apply_bt_tweaks "$FW_ZERO_W"
+else
+  echo "Unable to detect model automatically."
+  echo "Select device type to apply Bluetooth firmware tweaks:"
+  echo "  1) Raspberry Pi Zero W"
+  echo "  2) Raspberry Pi Zero 2 W"
+  echo "  3) Skip"
+  read -rp "Choice [1-3]: " MODEL_CHOICE
+  case "$MODEL_CHOICE" in
+    1) apply_bt_tweaks "$FW_ZERO_W" ;;
+    2) apply_bt_tweaks "$FW_ZERO_2_W" ;;
+    *) echo "Skipping Bluetooth firmware tweaks." ;;
+  esac
+fi
+
 # Configure Wi-Fi network if not present
 WPA_CONF='/etc/wpa_supplicant/wpa_supplicant.conf'
 if ! grep -qF "$SSID" "$WPA_CONF"; then
