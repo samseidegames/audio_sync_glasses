@@ -526,6 +526,7 @@ async def index(request):
       const uploadLabel = document.createElement('label');
       uploadLabel.className = 'row-upload-btn';
       uploadLabel.textContent = '📁';
+      uploadLabel.title = 'Add MP3 file(s) for this guest';
       const uploadInput = document.createElement('input');
       uploadInput.type = 'file';
       uploadInput.className = 'upload-input-row';
@@ -539,6 +540,7 @@ async def index(request):
       delayBtn.className = 'row-delay-btn';
       delayBtn.textContent = '⏱️';
       delayBtn.type = 'button';
+      delayBtn.title = 'Add delay to this guest\'s timeline';
       delayBtn.dataset.guest = guestId;
       buttonGroup.appendChild(delayBtn);
       
