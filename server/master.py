@@ -936,13 +936,37 @@ async def ws_handler(request):
     # WebSocket handler: support time sync and client registration (both audio and trigger clients)
     ws = web.WebSocketResponse()
     await ws.prepare(request)
-    # register: expect first TEXT message with registration, install_dir, and offset
+    
+    # First message can be either TIME_REQUEST (for time sync) or registration
     try:
         text = await ws.receive_str()
     except Exception:
         await ws.close()
         return ws
+    
     data = json.loads(text)
+    
+    # Handle time sync requests (can be called without registration)
+    if data.get('type') == 'TIME_REQUEST':
+        reply = {'type': 'TIME_REPLY', 'server_time': time.time()}
+        await ws.send_json(reply)
+        # Continue listening for more time requests on this connection
+        try:
+            async for msg in ws:
+                if msg.type != WSMsgType.TEXT:
+                    continue
+                try:
+                    msg_data = json.loads(msg.data)
+                except Exception:
+                    continue
+                if msg_data.get('type') == 'TIME_REQUEST':
+                    reply = {'type': 'TIME_REPLY', 'server_time': time.time()}
+                    await ws.send_json(reply)
+        except Exception:
+            pass
+        return ws
+    
+    # Otherwise expect registration (guest_id or trigger_id)
     gid = data.get('guest_id')
     tid = data.get('trigger_id')
     
@@ -977,7 +1001,7 @@ async def ws_handler(request):
                 reply = {'type': 'TIME_REPLY', 'server_time': time.time()}
                 await ws.send_json(reply)
                 continue
-            # Ignore other messages
+            # Ignore other messages (server only sends, doesn't receive commands)
             pass
     finally:
         if client_type == 'guest':
