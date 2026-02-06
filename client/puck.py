@@ -107,35 +107,43 @@ async def sync_clock(samples: int = 5, timeout: float = 2.0, delay_between: floa
     """
     global LOCAL_OFFSET
     offsets = []
+    print(f"[{format_time(time.time())}] Attempting time sync with {SERVER_URI}...")
     try:
         async with websockets.connect(SERVER_URI) as ws:
+            print(f"[{format_time(time.time())}] Time sync: connected to {SERVER_URI}")
             for i in range(samples):
                 t0 = time.time()
-                await ws.send(json.dumps({"type": "TIME_REQUEST"}))
                 try:
+                    await ws.send(json.dumps({"type": "TIME_REQUEST"}))
                     msg = await asyncio.wait_for(ws.recv(), timeout=timeout)
+                    t1 = time.time()
                 except asyncio.TimeoutError:
-                    print("Time sync: response timeout, retrying...")
+                    print(f"[{format_time(time.time())}] Time sync: response timeout on sample {i+1}/{samples}, retrying...")
                     continue
-                t1 = time.time()
+                except Exception as e:
+                    print(f"[{format_time(time.time())}] Time sync: send/recv failed on sample {i+1}/{samples}: {e}")
+                    continue
+                    
                 try:
                     data = json.loads(msg)
                     if data.get("type") != "TIME_REPLY" or "server_time" not in data:
-                        print(f"Time sync: unexpected reply: {data}")
+                        print(f"[{format_time(time.time())}] Time sync: unexpected reply: {data}")
                         continue
                     server_time = float(data["server_time"])
                 except Exception as e:
-                    print(f"Time sync: failed to parse reply: {e}")
+                    print(f"[{format_time(time.time())}] Time sync: failed to parse reply: {e}")
                     continue
+                    
                 rtt = t1 - t0
                 offset_sample = server_time - (t0 + rtt / 2.0)
                 offsets.append(offset_sample)
+                print(f"[{format_time(time.time())}] Time sync sample {i+1}/{samples}: offset={offset_sample:.3f}s (rtt={rtt*1000:.1f}ms)")
                 await asyncio.sleep(delay_between)
     except Exception as e:
-        print(f"Time sync: connection failed: {e}")
+        print(f"[{format_time(time.time())}] Time sync: connection failed: {type(e).__name__}: {e}")
 
     if not offsets:
-        print("Time sync: no valid samples, assuming external sync unchanged.")
+        print(f"[{format_time(time.time())}] Time sync: no valid samples, assuming external sync unchanged (LOCAL_OFFSET={LOCAL_OFFSET})")
         return
 
     # use median to reduce effect of outliers
@@ -151,7 +159,7 @@ async def sync_clock(samples: int = 5, timeout: float = 2.0, delay_between: floa
     offset_hours = int(LOCAL_OFFSET // 3600)
     offset_mins = int((LOCAL_OFFSET % 3600) // 60)
     offset_secs = LOCAL_OFFSET % 60
-    print(f"Time sync complete: LOCAL_OFFSET set to {offset_hours:02d}:{offset_mins:02d}:{offset_secs:06.3f} (based on {len(offsets)} samples)")
+    print(f"[{format_time(time.time())}] Time sync complete: LOCAL_OFFSET set to {offset_hours:02d}:{offset_mins:02d}:{offset_secs:06.3f} (based on {len(offsets)} samples)")
 
 async def send_registration(ws, guest_id):
     # include client installation directory for file uploads
