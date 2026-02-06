@@ -203,69 +203,92 @@ def download_track(track_file):
         print(f"[{format_time(time.time())}] Failed to download {track_file}: {e}")
 
 async def schedule_play(track_file, timestamp, offset):
-    global last_expected_end_time, scheduled_queue
-    # Refresh clock sync before scheduling playback to reduce drift
-    # Light-weight drift check instead of full re-sync before each track to reduce jitter
-    now = time.time() + LOCAL_OFFSET
-    delay = timestamp - now
-    if delay < 0:
-        delay_hours = int((-delay) // 3600)
-        delay_mins = int(((-delay) % 3600) // 60)
-        delay_secs = (-delay) % 60
-        print(f"[{format_time(time.time())}] Missed start by {delay_hours:02d}:{delay_mins:02d}:{delay_secs:06.3f}, playing immediate with offset adjustment.")
-        offset += -delay
-        delay = 0
-    await asyncio.sleep(delay)
-    path = AUDIO_DIR / track_file
-    if not path.exists():
-        download_track(track_file)
+    global last_expected_end_time, scheduled_queue, active_plays
+    try:
+        # Refresh clock sync before scheduling playback to reduce drift
+        # Light-weight drift check instead of full re-sync before each track to reduce jitter
+        now = time.time() + LOCAL_OFFSET
+        delay = timestamp - now
+        if delay < 0:
+            delay_hours = int((-delay) // 3600)
+            delay_mins = int(((-delay) % 3600) // 60)
+            delay_secs = (-delay) % 60
+            print(f"[{format_time(time.time())}] Missed start by {delay_hours:02d}:{delay_mins:02d}:{delay_secs:06.3f}, playing immediate with offset adjustment.")
+            offset += -delay
+            delay = 0
+        
+        print(f"[{format_time(time.time())}] Scheduling playback: waiting {delay:.2f}s for track '{track_file}' (ts={timestamp}, offset={offset})")
+        await asyncio.sleep(delay)
+        
+        # Check file exists
+        path = AUDIO_DIR / track_file
+        print(f"[{format_time(time.time())}] Looking for audio file: {path}")
+        print(f"[{format_time(time.time())}] File exists: {path.exists()}")
+        
         if not path.exists():
-            print(f"[{format_time(time.time())}] Error: track {path} not found.")
-            return
-    # Use aplay for lightweight WAV playback on Raspberry Pi (preferred for WAV)
-    # Falls back to paplay (PulseAudio) or mpv if aplay unavailable
-    
-    # Try aplay first (native ALSA, works best for WAV on Pi)
-    cmd = None
-    player = None
-    
-    # Check which player is available
-    try:
-        subprocess.run(['which', 'aplay'], capture_output=True, check=True, timeout=2)
-        # aplay is available - use it for WAV playback
-        cmd = ['aplay', str(path)]
-        player = 'aplay'
-        print(f"[{format_time(time.time())}] Starting playback (aplay): {track_file}")
-    except (subprocess.CalledProcessError, FileNotFoundError):
-        # aplay not available, try paplay
+            print(f"[{format_time(time.time())}] File not found locally, attempting download...")
+            download_track(track_file)
+            print(f"[{format_time(time.time())}] After download, file exists: {path.exists()}")
+            if not path.exists():
+                print(f"[{format_time(time.time())}] ERROR: track {path} not found after download.")
+                return
+        
+        # Use aplay for lightweight WAV playback on Raspberry Pi (preferred for WAV)
+        # Falls back to paplay (PulseAudio) or mpv if aplay unavailable
+        
+        # Try aplay first (native ALSA, works best for WAV on Pi)
+        cmd = None
+        player = None
+        
+        # Check which player is available
         try:
-            subprocess.run(['which', 'paplay'], capture_output=True, check=True, timeout=2)
-            cmd = [
-                'paplay', '--device=default', str(path)
-            ]
-            player = 'paplay'
-            print(f"[{format_time(time.time())}] Starting playback (paplay): {track_file}")
+            subprocess.run(['which', 'aplay'], capture_output=True, check=True, timeout=2)
+            # aplay is available - use it for WAV playback
+            cmd = ['aplay', str(path)]
+            player = 'aplay'
+            print(f"[{format_time(time.time())}] Starting playback (aplay): {track_file}")
         except (subprocess.CalledProcessError, FileNotFoundError):
-            # Fall back to mpv
-            cmd = [
-                'mpv', '--no-video', '--really-quiet', '--audio-device=default',
-                '--cache=no', f'--start={offset}', str(path)
-            ]
-            player = 'mpv'
-            print(f"[{format_time(time.time())}] Starting playback (mpv): {track_file} (offset {offset}s)")
-    
-    # start actual playback and track active plays
-    start_actual = time.time() + LOCAL_OFFSET
-    global active_plays
-    active_plays += 1
-    try:
-        # Capture stderr to see audio errors
-        with open('/tmp/audio_playback.log', 'a') as log:
-            log.write(f"[{format_time(start_actual)}] Starting {player} with cmd: {cmd}\n")
-        proc = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True)
+            # aplay not available, try paplay
+            try:
+                subprocess.run(['which', 'paplay'], capture_output=True, check=True, timeout=2)
+                cmd = [
+                    'paplay', '--device=default', str(path)
+                ]
+                player = 'paplay'
+                print(f"[{format_time(time.time())}] Starting playback (paplay): {track_file}")
+            except (subprocess.CalledProcessError, FileNotFoundError):
+                # Fall back to mpv
+                cmd = [
+                    'mpv', '--no-video', '--really-quiet', '--audio-device=default',
+                    '--cache=no', f'--start={offset}', str(path)
+                ]
+                player = 'mpv'
+                print(f"[{format_time(time.time())}] Starting playback (mpv): {track_file} (offset {offset}s)")
+        
+        if cmd is None:
+            print(f"[{format_time(time.time())}] ERROR: No audio player available!")
+            return
+        
+        # start actual playback and track active plays
+        start_actual = time.time() + LOCAL_OFFSET
+        active_plays += 1
+        try:
+            # Capture stderr to see audio errors
+            with open('/tmp/audio_playback.log', 'a') as log:
+                log.write(f"[{format_time(start_actual)}] Starting {player} with cmd: {cmd}\n")
+            print(f"[{format_time(time.time())}] Executing command: {' '.join(cmd)}")
+            proc = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True)
+            print(f"[{format_time(time.time())}] Process started (PID: {proc.pid})")
+        except Exception as e:
+            print(f"[{format_time(time.time())}] ERROR starting playback: {type(e).__name__}: {e}")
+            import traceback
+            traceback.print_exc()
+            active_plays -= 1
+            return
     except Exception as e:
-        print(f"[{format_time(time.time())}] Error starting playback: {e}")
-        active_plays -= 1
+        print(f"[{format_time(time.time())}] CRITICAL ERROR in schedule_play: {type(e).__name__}: {e}")
+        import traceback
+        traceback.print_exc()
         return
     
     # remove this play from scheduled_queue (match by track and timestamp) and capture duration from server if present
@@ -280,35 +303,50 @@ async def schedule_play(track_file, timestamp, offset):
         pass
 
     # wait for playback process to complete
-    await asyncio.get_running_loop().run_in_executor(None, proc.wait)
-    _, stderr = proc.communicate()
-    if stderr:
-        with open('/tmp/audio_playback.log', 'a') as log:
-            log.write(f"[{format_time(time.time())}] Audio player stderr: {stderr}\n")
-        print(f"[{format_time(time.time())}] Audio player error output: {stderr}")
-    end_actual = time.time() + LOCAL_OFFSET
-    # compute duration (fallback if server didn't provide)
-    if duration is None or duration == 0:
-        duration = get_track_duration(track_file)
-    # Format durations as HH:MM:SS
-    dur_hours = int(duration // 3600)
-    dur_mins = int((duration % 3600) // 60)
-    dur_secs = duration % 60
-    print(f"[{format_time(end_actual)}] Playback finished for {track_file} (duration: {dur_hours:02d}:{dur_mins:02d}:{dur_secs:06.3f}, offset: {offset:.1f}s)")
-    last_expected_end_time = end_actual
-    active_plays -= 1
-    # if there is a next scheduled play, compute delay and report relative to actual end
-    next_item = None
-    for s in scheduled_queue:
-        if s.get('timestamp', 0) >= end_actual - 0.0001:
-            next_item = s
-            break
-    if next_item:
-        delay_seconds = next_item.get('timestamp', 0) - end_actual
-        if delay_seconds > 0:
-            print(f"[{format_time(end_actual)}] Delay: {delay_seconds:.1f}s before next track ({next_item.get('track')})")
-    else:
-        pass
+    try:
+        await asyncio.get_running_loop().run_in_executor(None, proc.wait)
+        _, stderr = proc.communicate()
+        if stderr:
+            with open('/tmp/audio_playback.log', 'a') as log:
+                log.write(f"[{format_time(time.time())}] Audio player stderr: {stderr}\n")
+            print(f"[{format_time(time.time())}] Audio player error output: {stderr}")
+        end_actual = time.time() + LOCAL_OFFSET
+        # compute duration (fallback if server didn't provide)
+        if duration is None or duration == 0:
+            duration = get_track_duration(track_file)
+        # Format durations as HH:MM:SS
+        dur_hours = int(duration // 3600)
+        dur_mins = int((duration % 3600) // 60)
+        dur_secs = duration % 60
+        print(f"[{format_time(end_actual)}] Playback finished for {track_file} (duration: {dur_hours:02d}:{dur_mins:02d}:{dur_secs:06.3f}, offset: {offset:.1f}s)")
+        last_expected_end_time = end_actual
+        active_plays -= 1
+        # if there is a next scheduled play, compute delay and report relative to actual end
+        next_item = None
+        for s in scheduled_queue:
+            if s.get('timestamp', 0) >= end_actual - 0.0001:
+                next_item = s
+                break
+        if next_item:
+            delay_seconds = next_item.get('timestamp', 0) - end_actual
+            if delay_seconds > 0:
+                print(f"[{format_time(end_actual)}] Delay: {delay_seconds:.1f}s before next track ({next_item.get('track')})")
+    except Exception as e:
+        print(f"[{format_time(time.time())}] ERROR during playback wait: {type(e).__name__}: {e}")
+        import traceback
+        traceback.print_exc()
+        active_plays -= 1
+    finally:
+        try:
+            # Ensure process is terminated if still running
+            if 'proc' in locals() and proc.poll() is None:
+                proc.terminate()
+                try:
+                    proc.wait(timeout=2)
+                except:
+                    proc.kill()
+        except:
+            pass
 
 async def handle_command(cmd):
     ctype = cmd.get('type')
@@ -317,6 +355,7 @@ async def handle_command(cmd):
         timestamp = float(cmd['timestamp'])
         offset = float(cmd.get('offset', 0.0))
         duration = float(cmd.get('duration', 0.0))
+        print(f"[{format_time(time.time())}] Processing PLAY command for {track}")
         # Format duration for log output as HH:MM:SS
         dur_hours = int(duration // 3600)
         dur_mins = int((duration % 3600) // 60)
@@ -340,7 +379,17 @@ async def handle_command(cmd):
             last_expected_end_time = expected_finish
         else:
             last_expected_end_time = max(last_expected_end_time, expected_finish)
-        asyncio.create_task(schedule_play(track, timestamp, offset))
+        
+        # Create task with error callback to catch any exceptions
+        task = asyncio.create_task(schedule_play(track, timestamp, offset))
+        def handle_task_error(t):
+            try:
+                t.result()
+            except Exception as e:
+                print(f"[{format_time(time.time())}] Task error for {track}: {type(e).__name__}: {e}")
+                import traceback
+                traceback.print_exc()
+        task.add_done_callback(handle_task_error)
     elif ctype == 'PLAYLIST_COMPLETE':
         ts = float(cmd.get('timestamp', 0))
         async def log_playlist_complete(at_ts):

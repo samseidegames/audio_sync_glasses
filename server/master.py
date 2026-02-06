@@ -277,87 +277,91 @@ async def index(request):
     html = ('<html>'
             '<head>'
             '<meta charset="utf-8"/>'
+            '<meta name="viewport" content="width=device-width, initial-scale=1.0">'
+            '<link href="https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@400;500;600;700&family=Smythe&display=swap" rel="stylesheet">'
             '<title>Willowcrest Manor Audio Master Control</title>'
             '<style>'
             '* { box-sizing: border-box; }'
-            'body { font-family: "Segoe UI", system-ui, sans-serif; background: #0A1612; color: #C5C1C0; margin:0; padding:0; }'
+            'body { font-family: "Josefin Sans", sans-serif; background: #1A1A2E; color: #E8E4D7; margin:0; padding:0; letter-spacing:0.3px; }'
             '.header-wrapper { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:30px; }'
             '.header-left { flex:1; }'
             '.header-right { flex-shrink:0; }'
-            '.container { width:75vw; max-width:1600px; min-width:700px; margin:40px auto; background:#1A2930; padding:30px; border-radius:12px; border:1px solid #2A3F4D; }'
-            'h1 { text-align:left; color:#F7C83E; font-weight:600; margin:0 0 10px 0; }'
-            '.subtitle { text-align:left; color:#B5B1B0; margin:0 0 10px 0; }'
-            'h2 { color:#C5C1C0; margin-top:30px; font-size:1.2em; border-bottom:1px solid #2A3F4D; padding-bottom:10px; }'
+            '.container { width:75vw; max-width:1600px; min-width:700px; margin:40px auto; background:#3D2B4B; padding:30px; border-radius:2px; border:2px solid #C9A961; box-shadow:inset 0 0 20px rgba(0,0,0,0.5); }'
+            'h1 { text-align:left; color:#C9A961; font-weight:400; margin:0 0 10px 0; font-size:2.2em; letter-spacing:2px; text-transform:uppercase; font-family: "Smythe", cursive; }'
+            '.subtitle { text-align:left; color:#D4C5B9; margin:0 0 10px 0; font-size:0.95em; font-style:italic; }'
+            'h2 { color:#C9A961; margin-top:30px; font-size:1.3em; border-bottom:2px solid #8B4789; padding-bottom:10px; letter-spacing:1px; font-family: "Smythe", cursive; }'
             '.guest-list { list-style:none; padding:0; margin:0; }'
-            '.guest-card { background:#0F1E21; border:1px solid #2A3F4D; border-radius:8px; padding:16px; margin-bottom:16px; }'
-            '.guest-header { font-size:1.1em; color:#F7C83E; margin-bottom:12px; font-weight:500; }'
+            '.guest-card { background:#2A1F3D; border:1px solid #5A4570; border-radius:0; padding:16px; margin-bottom:16px; box-shadow:0 2px 8px rgba(0,0,0,0.4); }'
+            '.guest-header { font-size:1.1em; color:#C9A961; margin-bottom:12px; font-weight:500; }'
             'form { margin-top:12px; }'
-            'input[type=text], input[type=file] { background:#0A1612; border:1px solid #2A3F4D; color:#C5C1C0; padding:8px 12px; border-radius:6px; }'
+            'input[type=text], input[type=file] { background:#1A1A2E; border:1px solid #5A4570; color:#E8E4D7; padding:8px 12px; border-radius:0; }'
+            'input[type=text]:focus, input[type=file]:focus { outline:none; border-color:#C9A961; box-shadow:0 0 0 2px rgba(201,169,97,0.3); }'
             'input[type=file] { padding:6px; }'
-            'input[type=number] { background:#0A1612; border:1px solid #2A3F4D; color:#C5C1C0; padding:4px 8px; border-radius:4px; }'
-            '.btn { border:none; padding:8px 16px; border-radius:6px; cursor:pointer; font-weight:500; font-size:0.9em; transition:all 0.2s; }'
-            '.btn-primary { background:#F7C83E; color:#0A1612; }'
-            '.btn-primary:hover { background:#FDD859; }'
-            '.btn-secondary { background:#0F1E21; color:#C5C1C0; border:1px solid #2A3F4D; }'
-            '.btn-secondary:hover { background:#1A2930; }'
-            '.btn-delay { background:#F7C83E; color:#0A1612; }'
-            '.btn-delay:hover { background:#FDD859; }'
-            '.btn-upload { background:#F7C83E; color:#0A1612; }'
-            '.btn-upload:hover { background:#FDD859; }'
-            '.btn-danger { background:#D97777; color:#fff; }'
-            '.btn-danger:hover { background:#E89393; }'
-            '.btn-go { background:#F7C83E; color:#0A1612; font-size:1.2em; padding:12px 40px; }'
-            '.btn-go:hover { background:#FDD859; }'
+            'input[type=number] { background:#1A1A2E; border:1px solid #5A4570; color:#E8E4D7; padding:4px 8px; border-radius:0; }'
+            'input[type=number]:focus { outline:none; border-color:#C9A961; box-shadow:0 0 0 2px rgba(201,169,97,0.3); }'
+            '.btn { border:none; padding:8px 16px; border-radius:0; cursor:pointer; font-weight:500; font-size:0.9em; transition:all 0.2s; font-family:inherit; }'
+            '.btn-primary { background:#8B4789; color:#E8E4D7; border:2px solid #C9A961; }'
+            '.btn-primary:hover { background:#A356A3; border-color:#D4B876; }'
+            '.btn-secondary { background:#2A1F3D; color:#E8E4D7; border:1px solid #5A4570; }'
+            '.btn-secondary:hover { background:#3D2B4B; }'
+            '.btn-delay { background:#8B4789; color:#E8E4D7; }'
+            '.btn-delay:hover { background:#A356A3; }'
+            '.btn-upload { background:#C9A961; color:#1A1A2E; font-weight:600; }'
+            '.btn-upload:hover { background:#D4B876; }'
+            '.btn-danger { background:#A76363; color:#E8E4D7; }'
+            '.btn-danger:hover { background:#B87A7A; }'
+            '.btn-go { background:#8B4789; color:#E8E4D7; font-size:1.3em; padding:12px 40px; font-weight:500; letter-spacing:1px; text-transform:uppercase; border:2px solid #C9A961; }'
+            '.btn-go:hover { background:#A356A3; border-color:#D4B876; }'
             '.btn-group { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:12px; }'
-            '.track-row { background:#1A2930; border:1px solid #F7C83E !important; }'
-            '.delay-row { background:#1A2930; border:1px solid #F7C83E !important; }'
+            '.track-row { background:#2A1F3D; border:1px solid #8B4789 !important; }'
+            '.delay-row { background:#2A1F3D; border:1px solid #C9A961 !important; }'
             '.upload-input { display:none; }'
             '.start-section { display:none; }'
-            '.start-button-wrapper { position:fixed; top:30px; right:30px; z-index:100; }'
-            '.timeline-container { width: 100%; max-width: 1600px; margin: 0 auto 12px auto; display:flex; }'
+            '.start-button-wrapper { margin-top:20px; text-align:center; }'
+            '.timeline-container { width: 100%; max-width: 1600px; margin: 0 auto 12px auto; display:flex; overflow-y:hidden; }'
             '.unified-timeline-section { margin-top:20px; }'
             '.timeline-controls { margin-bottom:20px; }'
-            '.timeline-column-fixed { width:150px; flex-shrink:0; border-right:1px solid #2A3F4D; border-radius:8px 0 0 8px; overflow:hidden; }'
-            '.timeline-column-scrollable { flex:1; overflow-x:auto; border:1px solid #2A3F4D; border-radius:0 8px 8px 0; }'
-            '.timeline-column-scrollable::-webkit-scrollbar { height:8px; }'
-            '.timeline-column-scrollable::-webkit-scrollbar-track { background:#0A1612; }'
-            '.timeline-column-scrollable::-webkit-scrollbar-thumb { background:#F7C83E; border-radius:4px; }'
-            '.timeline-column-scrollable::-webkit-scrollbar-thumb:hover { background:#FDD859; }'
-            '.timeline-rows-container { display:flex; flex-direction:column; min-width:100%; }'
-            '.timeline-row { display:flex; border-bottom:1px solid #2A3F4D; min-height:64px; }'
-            '.timeline-row:last-child { border-bottom:none; }'
-            '.timeline-row-label { width:150px; padding:6px; background:#0F1E21; display:flex; flex-direction:column; align-items:center; justify-content:center; font-weight:600; color:#F7C83E; font-size:11px; white-space:nowrap; flex-shrink:0; gap:4px; }'
+            '.timeline-column-fixed { width:150px; flex-shrink:0; border-right:1px solid #5A4570; border-radius:0; overflow:hidden; }'
+            '.timeline-column-scrollable { flex:1; overflow-x:auto; overflow-y:hidden; border:1px solid #5A4570; border-radius:0; background:#bab0ca; overscroll-behavior:contain; }'
+            '.timeline-column-scrollable::-webkit-scrollbar { height:16px; }'
+            '.timeline-column-scrollable::-webkit-scrollbar-track { background:#1A1A2E; }'
+            '.timeline-column-scrollable::-webkit-scrollbar-thumb { background:#C9A961; border-radius:0; }'
+            '.timeline-column-scrollable::-webkit-scrollbar-thumb:hover { background:#D4B876; }'
+            '.timeline-rows-container { display:flex; flex-direction:column; min-width:100%; overflow-x:hidden; overflow-y:hidden; }'
+            '.timeline-row { display:flex; height:64px; }'
+            '.timeline-row:last-child { }'
+            '.timeline-row-label { width:150px; padding:6px; background:#2A1F3D; display:flex; flex-direction:column; align-items:center; justify-content:center; font-weight:600; color:#C9A961; font-size:20px; white-space:nowrap; flex-shrink:0; gap:4px; height:64px; border-bottom:1px solid #5A4570; }'
             '.timeline-row-label.trigger { justify-content:center; }'
-            '.row-label-text { text-align:center; font-size:11px; }'
-            '.row-button-group { display:flex; gap:2px; }'
-            '.row-upload-btn { padding:3px 6px; font-size:10px; background:#F7C83E; color:#0A1612; border:none; border-radius:3px; cursor:pointer; white-space:nowrap; font-weight:600; }'
-            '.row-upload-btn:hover { background:#FDD859; }'
-            '.row-delay-btn { padding:3px 6px; font-size:10px; background:#F7C83E; color:#0A1612; border:none; border-radius:3px; cursor:pointer; white-space:nowrap; font-weight:600; }'
-            '.row-delay-btn:hover { background:#FDD859; }'
+            '.row-label-text { text-align:center; font-size:20px; }'
+            '.row-button-group { display:flex; gap:2px; justify-content:flex-start; }'
+            '.row-upload-btn { padding:3px 6px; font-size:10px; background:#C9A961; color:#1A1A2E; border:none; border-radius:0; cursor:pointer; white-space:nowrap; font-weight:600; }'
+            '.row-upload-btn:hover { background:#D4B876; }'
+            '.row-delay-btn { padding:3px 6px; font-size:10px; background:#8B4789; color:#E8E4D7; border:none; border-radius:0; cursor:pointer; white-space:nowrap; font-weight:600; }'
+            '.row-delay-btn:hover { background:#A356A3; }'
             '.upload-input-row { display:none; }'
-            '.timeline-row-content { flex:1; position:relative; height:64px; min-height:64px; }'
-            '.timeline-ruler { overflow-x:auto; overflow-y:hidden; height:40px; }'
+            '.timeline-row-content { flex:1; position:relative; height:64px; border-bottom:1px solid #5A4570; }'
+            '.timeline-ruler { overflow-x:auto; overflow-y:hidden; height:40px; margin:0; padding:0; }'
             '.timeline-item .label { font-size:11px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width: calc(100% - 60px); display:inline-block; }'
             '.timeline-item .label[title]:hover { text-decoration:underline; }'
-            '.timeline-item .meta { font-size:11px; color:#A59594; margin-left:8px; }'
-            '.resize-handle { position:absolute; right:6px; top:50%; transform:translateY(-50%); width:10px; height:56%; background:rgba(247,200,62,0.2); border-radius:4px; cursor:ew-resize; }'
+            '.timeline-item .meta { font-size:11px; color:#D4C5B9; margin-left:8px; }'
+            '.resize-handle { position:absolute; right:6px; top:50%; transform:translateY(-50%); width:10px; height:56%; background:rgba(201,169,97,0.3); border-radius:0; cursor:ew-resize; }'
             '.zoom-controls { position:absolute; right:12px; top:6px; display:flex; gap:6px; align-items:center; display:none; }'
             '.zoom-controls .btn { padding:6px 10px; font-size:12px; }'
-            '.zoom-level { color:#B5B1B0; font-size:12px; padding:4px 8px; }'
-            '.upload-overlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:1000; justify-content:center; align-items:center; }'
+            '.zoom-level { color:#D4C5B9; font-size:12px; padding:4px 8px; }'
+            '.upload-overlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:1000; justify-content:center; align-items:center; }'
             '.upload-overlay.active { display:flex; }'
-            '.upload-message { background:#1A2930; border:2px solid #F7C83E; border-radius:12px; padding:40px; text-align:center; box-shadow:0 8px 32px rgba(0,0,0,0.8); }'
-            '.upload-message h2 { color:#F7C83E; margin:0 0 15px 0; font-size:1.5em; }'
-            '.upload-message p { color:#C5C1C0; margin:0; font-size:1.1em; }'
-            '.spinner { display:inline-block; width:40px; height:40px; border:4px solid #2A3F4D; border-top:4px solid #F7C83E; border-radius:50%; animation:spin 1s linear infinite; margin-bottom:15px; }'
+            '.upload-message { background:#3D2B4B; border:2px solid #C9A961; border-radius:0; padding:40px; text-align:center; box-shadow:0 8px 32px rgba(0,0,0,0.7), inset 0 0 15px rgba(201,169,97,0.1); }'
+            '.upload-message h2 { color:#C9A961; margin:0 0 15px 0; font-size:1.5em; letter-spacing:1px; }'
+            '.upload-message p { color:#E8E4D7; margin:0; font-size:1.1em; }'
+            '.spinner { display:inline-block; width:40px; height:40px; border:4px solid #5A4570; border-top:4px solid #C9A961; border-radius:50%; animation:spin 1s linear infinite; margin-bottom:15px; }'
             '@keyframes spin { 0% { transform:rotate(0deg); } 100% { transform:rotate(360deg); } }'
             '</style>'
             '<body>'
             '<div class="upload-overlay" id="uploadOverlay"><div class="upload-message"><div class="spinner"></div><h2>Please Wait</h2><p>Uploading and processing file...</p></div></div>'
-            '<div class="start-button-wrapper"><form method="POST" action="/start"><button type="submit" class="btn btn-go">▶️ GO</button></form></div>'
             '<div class="container">')
     html += '<div class="header-wrapper">'
-    html += '<div class="header-left"><h1>🎭 Willowcrest Manor</h1><p class="subtitle">Audio Master Control</p></div>'
+    html += '<div class="header-left"><h1>Willowcrest Manor</h1><p class="subtitle">Audio Master Control</p></div>'
+    html += '<div class="header-right"><form method="POST" action="/start"><button type="submit" class="btn btn-go">🎭 COMMENCE</button></form></div>'
     html += '</div>'
     html += '<h2>Unified Timeline</h2>'
     
@@ -391,11 +395,11 @@ async def index(request):
     html += '<div class="btn-group">'
     html += '<button type="submit" class="btn btn-primary">💾 Save All Playlists</button>'
     html += '<div class="trigger-control" style="display:flex; gap:8px; align-items:center;">'
-    html += f'<select id="trigger-select" style="background:#0d1117; border:1px solid #30363d; color:#c9d1d9; padding:8px 12px; border-radius:6px;"><option value="">Select Trigger...</option>'
+    html += f'<select id="trigger-select" style="background:#1A1A2E; border:1px solid #5A4570; color:#E8E4D7; padding:8px 12px; border-radius:0; font-family: \'Josefin Sans\', sans-serif;"><option value="">Select Trigger...</option>'
     for trigger_id in available_triggers:
         html += f'<option value="{trigger_id}">⚡ {trigger_id}</option>'
     html += '</select>'
-    html += '<button type="button" class="btn" style="background:#d946ef;color:#fff;" id="add-trigger-btn">Add Trigger</button>'
+    html += '<button type="button" class="btn btn-primary" id="add-trigger-btn">Add Trigger</button>'
     html += '</div>'
     html += '</div>'
     html += '</div>'
@@ -415,14 +419,14 @@ async def index(request):
   function makeRuler(totalSeconds, pps) {
     const ruler = document.createElement('div');
     ruler.className = 'timeline-ruler';
-    ruler.style.cssText = 'position:relative; height:28px; border-bottom:1px solid #30363d; margin-bottom:8px;';
+    ruler.style.cssText = 'position:sticky; top:0; height:28px; border-bottom:1px solid #30363d; margin-bottom:0; background:#bab0ca; z-index:10;';
     const numTicks = Math.max(5, Math.ceil(totalSeconds / 5));
     const step = Math.max(1, Math.ceil(totalSeconds / numTicks));
     for (let t = 0; t <= totalSeconds + 0.0001; t += step) {
       const x = timeToPx(t, pps);
       const tick = document.createElement('div');
       tick.style.cssText = 'position:absolute; left:' + x + 'px; top:0; height:100%;';
-      tick.innerHTML = '<div style="position:absolute; top:2px; left:0; color:#8b949e; font-size:12px;">' + new Date(t * 1000).toISOString().substr(14, 5) + '</div>' +
+      tick.innerHTML = '<div style="position:absolute; top:2px; left:0; color:#1A1A2E; font-size:12px;">' + new Date(t * 1000).toISOString().substr(14, 5) + '</div>' +
                        '<div style="position:absolute; top:20px; left:0; width:1px; height:8px; background:#30363d;"></div>';
       ruler.appendChild(tick);
     }
@@ -504,6 +508,7 @@ async def index(request):
     
     const rowsContainer = document.createElement('div');
     rowsContainer.className = 'timeline-rows-container';
+    rowsContainer.style.width = (totalPx + 120) + 'px';
     
     // Create rows for each guest
     const rowDivs = {};
@@ -590,6 +595,9 @@ async def index(request):
     rowDivs['triggers'] = triggerContent;
     
     rowsContainerScrollable.appendChild(rowsContainer);
+    
+    // Vertical scrolling is disabled via CSS on the timeline containers.
+    
     timelineContainer.appendChild(rowsContainerFixed);
     timelineContainer.appendChild(rowsContainerScrollable);
     
@@ -817,7 +825,8 @@ async def index(request):
       ruler = makeRuler(Math.ceil(totalSeconds+1), pps);
       const totalPx = Math.max(Math.round(totalSeconds * pps), Math.round(availableWidth));
       ruler.style.width = (totalPx + 120) + 'px';
-      timelineContainer.insertBefore(ruler, rowsContainer);
+      rowsContainer.style.width = (totalPx + 120) + 'px';
+      rowsContainerScrollable.insertBefore(ruler, rowsContainer);
       
       // Update all row widths
       Object.keys(rowDivs).forEach(function(key) {
@@ -839,11 +848,7 @@ async def index(request):
     zoomControls.querySelector('.zoom-out').addEventListener('click', function() { updateScale(pps - 9); });
     
     // Wheel zoom
-    timelineContainer.addEventListener('wheel', function(e) {
-      e.preventDefault();
-      if (e.deltaY < 0) updateScale(pps + 9);
-      else updateScale(pps - 9);
-    }, { passive: false });
+    // Wheel zoom disabled to prevent scrollwheel interactions inside the timeline
     
     // Handle form submission - collect all timeline data
     form.addEventListener('submit', function(e) {
