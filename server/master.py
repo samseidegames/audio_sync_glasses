@@ -280,62 +280,76 @@ async def index(request):
             '<title>Willowcrest Manor Audio Master Control</title>'
             '<style>'
             '* { box-sizing: border-box; }'
-            'body { font-family: "Segoe UI", system-ui, sans-serif; background: #0d1117; color: #c9d1d9; margin:0; padding:0; }'
+            'body { font-family: "Segoe UI", system-ui, sans-serif; background: #0A1612; color: #C5C1C0; margin:0; padding:0; }'
             '.header-wrapper { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:30px; }'
             '.header-left { flex:1; }'
             '.header-right { flex-shrink:0; }'
-            '.container { width:75vw; max-width:1600px; min-width:700px; margin:40px auto; background:#161b22; padding:30px; border-radius:12px; border:1px solid #30363d; }'
-            'h1 { text-align:left; color:#58a6ff; font-weight:600; margin:0 0 10px 0; }'
-            '.subtitle { text-align:left; color:#8b949e; margin:0 0 10px 0; }'
-            'h2 { color:#c9d1d9; margin-top:30px; font-size:1.2em; border-bottom:1px solid #30363d; padding-bottom:10px; }'
+            '.container { width:75vw; max-width:1600px; min-width:700px; margin:40px auto; background:#1A2930; padding:30px; border-radius:12px; border:1px solid #2A3F4D; }'
+            'h1 { text-align:left; color:#F7C83E; font-weight:600; margin:0 0 10px 0; }'
+            '.subtitle { text-align:left; color:#B5B1B0; margin:0 0 10px 0; }'
+            'h2 { color:#C5C1C0; margin-top:30px; font-size:1.2em; border-bottom:1px solid #2A3F4D; padding-bottom:10px; }'
             '.guest-list { list-style:none; padding:0; margin:0; }'
-            '.guest-card { background:#21262d; border:1px solid #30363d; border-radius:8px; padding:16px; margin-bottom:16px; }'
-            '.guest-header { font-size:1.1em; color:#58a6ff; margin-bottom:12px; font-weight:500; }'
+            '.guest-card { background:#0F1E21; border:1px solid #2A3F4D; border-radius:8px; padding:16px; margin-bottom:16px; }'
+            '.guest-header { font-size:1.1em; color:#F7C83E; margin-bottom:12px; font-weight:500; }'
             'form { margin-top:12px; }'
-            'input[type=text], input[type=file] { background:#0d1117; border:1px solid #30363d; color:#c9d1d9; padding:8px 12px; border-radius:6px; }'
+            'input[type=text], input[type=file] { background:#0A1612; border:1px solid #2A3F4D; color:#C5C1C0; padding:8px 12px; border-radius:6px; }'
             'input[type=file] { padding:6px; }'
-            'input[type=number] { background:#0d1117; border:1px solid #30363d; color:#c9d1d9; padding:4px 8px; border-radius:4px; }'
+            'input[type=number] { background:#0A1612; border:1px solid #2A3F4D; color:#C5C1C0; padding:4px 8px; border-radius:4px; }'
             '.btn { border:none; padding:8px 16px; border-radius:6px; cursor:pointer; font-weight:500; font-size:0.9em; transition:all 0.2s; }'
-            '.btn-primary { background:#238636; color:#fff; }'
-            '.btn-primary:hover { background:#2ea043; }'
-            '.btn-secondary { background:#21262d; color:#c9d1d9; border:1px solid #30363d; }'
-            '.btn-secondary:hover { background:#30363d; }'
-            '.btn-delay { background:#1f6feb; color:#fff; }'
-            '.btn-delay:hover { background:#388bfd; }'
-            '.btn-upload { background:#8957e5; color:#fff; }'
-            '.btn-upload:hover { background:#a371f7; }'
-            '.btn-danger { background:#da3633; color:#fff; }'
-            '.btn-danger:hover { background:#f85149; }'
-            '.btn-go { background:#238636; color:#fff; font-size:1.2em; padding:12px 40px; }'
-            '.btn-go:hover { background:#2ea043; }'
+            '.btn-primary { background:#F7C83E; color:#0A1612; }'
+            '.btn-primary:hover { background:#FDD859; }'
+            '.btn-secondary { background:#0F1E21; color:#C5C1C0; border:1px solid #2A3F4D; }'
+            '.btn-secondary:hover { background:#1A2930; }'
+            '.btn-delay { background:#F7C83E; color:#0A1612; }'
+            '.btn-delay:hover { background:#FDD859; }'
+            '.btn-upload { background:#F7C83E; color:#0A1612; }'
+            '.btn-upload:hover { background:#FDD859; }'
+            '.btn-danger { background:#D97777; color:#fff; }'
+            '.btn-danger:hover { background:#E89393; }'
+            '.btn-go { background:#F7C83E; color:#0A1612; font-size:1.2em; padding:12px 40px; }'
+            '.btn-go:hover { background:#FDD859; }'
             '.btn-group { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:12px; }'
-            '.track-row { background:#1c3a2e; border:1px solid #238636 !important; }'
-            '.delay-row { background:#2d2a1c; border:1px solid #9e6a03 !important; }'
+            '.track-row { background:#1A2930; border:1px solid #F7C83E !important; }'
+            '.delay-row { background:#1A2930; border:1px solid #F7C83E !important; }'
             '.upload-input { display:none; }'
             '.start-section { display:none; }'
             '.start-button-wrapper { position:fixed; top:30px; right:30px; z-index:100; }'
-            '.timeline-container { width: 100%; max-width: 1600px; margin: 0 auto 12px auto; overflow-x: auto; }'
+            '.timeline-container { width: 100%; max-width: 1600px; margin: 0 auto 12px auto; display:flex; }'
             '.unified-timeline-section { margin-top:20px; }'
             '.timeline-controls { margin-bottom:20px; }'
-            '.timeline-rows-container { border:1px solid #30363d; border-radius:8px; overflow:hidden; }'
-            '.timeline-row { display:flex; border-bottom:1px solid #30363d; }'
+            '.timeline-column-fixed { width:150px; flex-shrink:0; border-right:1px solid #2A3F4D; border-radius:8px 0 0 8px; overflow:hidden; }'
+            '.timeline-column-scrollable { flex:1; overflow-x:auto; border:1px solid #2A3F4D; border-radius:0 8px 8px 0; }'
+            '.timeline-column-scrollable::-webkit-scrollbar { height:8px; }'
+            '.timeline-column-scrollable::-webkit-scrollbar-track { background:#0A1612; }'
+            '.timeline-column-scrollable::-webkit-scrollbar-thumb { background:#F7C83E; border-radius:4px; }'
+            '.timeline-column-scrollable::-webkit-scrollbar-thumb:hover { background:#FDD859; }'
+            '.timeline-rows-container { display:flex; flex-direction:column; min-width:100%; }'
+            '.timeline-row { display:flex; border-bottom:1px solid #2A3F4D; min-height:64px; }'
             '.timeline-row:last-child { border-bottom:none; }'
-            '.timeline-row-label { width:120px; padding:8px; background:#1c1f24; border-right:1px solid #30363d; display:flex; align-items:center; justify-content:center; font-weight:600; color:#58a6ff; font-size:12px; white-space:nowrap; flex-shrink:0; }'
-            '.timeline-row-content { flex:1; position:relative; height:64px; overflow-x:auto; min-height:64px; }'
+            '.timeline-row-label { width:150px; padding:6px; background:#0F1E21; display:flex; flex-direction:column; align-items:center; justify-content:center; font-weight:600; color:#F7C83E; font-size:11px; white-space:nowrap; flex-shrink:0; gap:4px; }'
+            '.timeline-row-label.trigger { justify-content:center; }'
+            '.row-label-text { text-align:center; font-size:11px; }'
+            '.row-button-group { display:flex; gap:2px; }'
+            '.row-upload-btn { padding:3px 6px; font-size:10px; background:#F7C83E; color:#0A1612; border:none; border-radius:3px; cursor:pointer; white-space:nowrap; font-weight:600; }'
+            '.row-upload-btn:hover { background:#FDD859; }'
+            '.row-delay-btn { padding:3px 6px; font-size:10px; background:#F7C83E; color:#0A1612; border:none; border-radius:3px; cursor:pointer; white-space:nowrap; font-weight:600; }'
+            '.row-delay-btn:hover { background:#FDD859; }'
+            '.upload-input-row { display:none; }'
+            '.timeline-row-content { flex:1; position:relative; height:64px; min-height:64px; }'
             '.timeline-ruler { overflow-x:auto; overflow-y:hidden; height:40px; }'
             '.timeline-item .label { font-size:11px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width: calc(100% - 60px); display:inline-block; }'
             '.timeline-item .label[title]:hover { text-decoration:underline; }'
-            '.timeline-item .meta { font-size:11px; color:#9aa4ad; margin-left:8px; }'
-            '.resize-handle { position:absolute; right:6px; top:50%; transform:translateY(-50%); width:10px; height:56%; background:rgba(255,255,255,0.06); border-radius:4px; cursor:ew-resize; }'
+            '.timeline-item .meta { font-size:11px; color:#A59594; margin-left:8px; }'
+            '.resize-handle { position:absolute; right:6px; top:50%; transform:translateY(-50%); width:10px; height:56%; background:rgba(247,200,62,0.2); border-radius:4px; cursor:ew-resize; }'
             '.zoom-controls { position:absolute; right:12px; top:6px; display:flex; gap:6px; align-items:center; display:none; }'
             '.zoom-controls .btn { padding:6px 10px; font-size:12px; }'
-            '.zoom-level { color:#8b949e; font-size:12px; padding:4px 8px; }'
-            '.upload-overlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:1000; justify-content:center; align-items:center; }'
+            '.zoom-level { color:#B5B1B0; font-size:12px; padding:4px 8px; }'
+            '.upload-overlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:1000; justify-content:center; align-items:center; }'
             '.upload-overlay.active { display:flex; }'
-            '.upload-message { background:#161b22; border:2px solid #58a6ff; border-radius:12px; padding:40px; text-align:center; box-shadow:0 8px 32px rgba(0,0,0,0.5); }'
-            '.upload-message h2 { color:#58a6ff; margin:0 0 15px 0; font-size:1.5em; }'
-            '.upload-message p { color:#c9d1d9; margin:0; font-size:1.1em; }'
-            '.spinner { display:inline-block; width:40px; height:40px; border:4px solid #30363d; border-top:4px solid #58a6ff; border-radius:50%; animation:spin 1s linear infinite; margin-bottom:15px; }'
+            '.upload-message { background:#1A2930; border:2px solid #F7C83E; border-radius:12px; padding:40px; text-align:center; box-shadow:0 8px 32px rgba(0,0,0,0.8); }'
+            '.upload-message h2 { color:#F7C83E; margin:0 0 15px 0; font-size:1.5em; }'
+            '.upload-message p { color:#C5C1C0; margin:0; font-size:1.1em; }'
+            '.spinner { display:inline-block; width:40px; height:40px; border:4px solid #2A3F4D; border-top:4px solid #F7C83E; border-radius:50%; animation:spin 1s linear infinite; margin-bottom:15px; }'
             '@keyframes spin { 0% { transform:rotate(0deg); } 100% { transform:rotate(360deg); } }'
             '</style>'
             '<body>'
@@ -376,7 +390,6 @@ async def index(request):
     html += '<div class="timeline-controls">'
     html += '<div class="btn-group">'
     html += '<button type="submit" class="btn btn-primary">💾 Save All Playlists</button>'
-    html += '<button type="button" class="btn btn-delay add-delay-btn">⏱️ Add Delay</button>'
     html += '<div class="trigger-control" style="display:flex; gap:8px; align-items:center;">'
     html += f'<select id="trigger-select" style="background:#0d1117; border:1px solid #30363d; color:#c9d1d9; padding:8px 12px; border-radius:6px;"><option value="">Select Trigger...</option>'
     for trigger_id in available_triggers:
@@ -384,7 +397,6 @@ async def index(request):
     html += '</select>'
     html += '<button type="button" class="btn" style="background:#d946ef;color:#fff;" id="add-trigger-btn">Add Trigger</button>'
     html += '</div>'
-    html += f'<label class="btn btn-upload">📁 Upload MP3<input type="file" class="upload-input-shared" accept=".mp3" multiple /></label>'
     html += '</div>'
     html += '</div>'
     html += '<div id="timeline-container-shared" style="margin-top:20px;"></div>'
@@ -466,16 +478,118 @@ async def index(request):
     const availableWidth = Math.max(window.innerWidth * 0.85, 900);
     let pps = Math.max(4, Math.min(200, Math.round(availableWidth / totalSeconds)));
     
-    // Create timeline container
-    const timelineContainer = document.createElement('div');
-    timelineContainer.className = 'timeline-container';
-    timelineContainer.style.cssText = 'position:relative; background: linear-gradient(90deg, rgba(255,255,255,0.01), rgba(255,255,255,0.01)); padding:8px; border-radius:6px;';
+    // Create timeline container with fixed and scrollable columns
+    const timelineContainer = document.getElementById('timeline-container-shared');
+    timelineContainer.style.display = 'flex';
+    timelineContainer.style.gap = '0';
     
-    // Create ruler
+    // Create fixed column for labels and buttons
+    const rowsContainerFixed = document.createElement('div');
+    rowsContainerFixed.className = 'timeline-column-fixed';
+    
+    // Create scrollable column for timeline
+    const rowsContainerScrollable = document.createElement('div');
+    rowsContainerScrollable.className = 'timeline-column-scrollable';
+    
+    // Create ruler inside scrollable column
     let ruler = makeRuler(Math.ceil(totalSeconds+1), pps);
     const totalPx = Math.max(Math.round(totalSeconds * pps), Math.round(availableWidth));
     ruler.style.width = (totalPx + 120) + 'px';
-    timelineContainer.appendChild(ruler);
+    rowsContainerScrollable.appendChild(ruler);
+    
+    // Create matching spacer in fixed column for alignment (28px to match ruler height)
+    const fixedSpacer = document.createElement('div');
+    fixedSpacer.style.cssText = 'height:28px; border-bottom:1px solid #30363d; background:#1c1f24;';
+    rowsContainerFixed.appendChild(fixedSpacer);
+    
+    const rowsContainer = document.createElement('div');
+    rowsContainer.className = 'timeline-rows-container';
+    
+    // Create rows for each guest
+    const rowDivs = {};
+    GUESTS_LIST.forEach(function(guestId) {
+      // Fixed column row (label + buttons)
+      const fixedRow = document.createElement('div');
+      fixedRow.className = 'timeline-row';
+      fixedRow.style.borderRight = '1px solid #30363d';
+      
+      const labelDiv = document.createElement('div');
+      labelDiv.className = 'timeline-row-label';
+      const labelText = document.createElement('div');
+      labelText.className = 'row-label-text';
+      labelText.textContent = '👤 Guest ' + guestId;
+      labelDiv.appendChild(labelText);
+      
+      const buttonGroup = document.createElement('div');
+      buttonGroup.className = 'row-button-group';
+      
+      const uploadLabel = document.createElement('label');
+      uploadLabel.className = 'row-upload-btn';
+      uploadLabel.textContent = '📁';
+      const uploadInput = document.createElement('input');
+      uploadInput.type = 'file';
+      uploadInput.className = 'upload-input-row';
+      uploadInput.accept = '.mp3';
+      uploadInput.multiple = true;
+      uploadInput.dataset.guest = guestId;
+      uploadLabel.appendChild(uploadInput);
+      buttonGroup.appendChild(uploadLabel);
+      
+      const delayBtn = document.createElement('button');
+      delayBtn.className = 'row-delay-btn';
+      delayBtn.textContent = '⏱️';
+      delayBtn.type = 'button';
+      delayBtn.dataset.guest = guestId;
+      buttonGroup.appendChild(delayBtn);
+      
+      labelDiv.appendChild(buttonGroup);
+      fixedRow.appendChild(labelDiv);
+      rowsContainerFixed.appendChild(fixedRow);
+      
+      // Scrollable column row (timeline content)
+      const scrollRow = document.createElement('div');
+      scrollRow.className = 'timeline-row';
+      const contentDiv = document.createElement('div');
+      contentDiv.className = 'timeline-row-content';
+      contentDiv.style.minWidth = (Math.max(400, Math.round(totalSeconds * pps)) + 60) + 'px';
+      contentDiv.dataset.rowType = 'guest';
+      contentDiv.dataset.rowId = guestId;
+      scrollRow.appendChild(contentDiv);
+      rowsContainer.appendChild(scrollRow);
+      rowDivs[guestId] = contentDiv;
+      
+      // Wire up delay button
+      delayBtn.addEventListener('click', function() {
+        const block = createBlock({ type: 'delay', seconds: 3.0, duration: 3.0 });
+        const last = Array.from(rowDivs[guestId].children).reduce((m, b) => Math.max(m, parseFloat(b.dataset.start || 0) + parseFloat(b.dataset.duration || 0)), 0);
+        placeBlock(block, last || 0, rowDivs[guestId]);
+      });
+    });
+    
+    // Create row for triggers
+    const triggerFixedRow = document.createElement('div');
+    triggerFixedRow.className = 'timeline-row';
+    triggerFixedRow.style.borderRight = '1px solid #30363d';
+    const triggerLabelDiv = document.createElement('div');
+    triggerLabelDiv.className = 'timeline-row-label trigger';
+    triggerLabelDiv.textContent = '⚡ Triggers';
+    triggerFixedRow.appendChild(triggerLabelDiv);
+    rowsContainerFixed.appendChild(triggerFixedRow);
+    
+    const triggerScrollRow = document.createElement('div');
+    triggerScrollRow.className = 'timeline-row';
+    const triggerContent = document.createElement('div');
+    triggerContent.className = 'timeline-row-content';
+    triggerContent.style.minWidth = (Math.max(400, Math.round(totalSeconds * pps)) + 60) + 'px';
+    triggerContent.dataset.rowType = 'trigger';
+    triggerContent.dataset.rowId = 'triggers';
+    triggerScrollRow.appendChild(triggerContent);
+    rowsContainer.appendChild(triggerScrollRow);
+    rowDivs['triggers'] = triggerContent;
+    
+    rowsContainerScrollable.appendChild(rowsContainer);
+    timelineContainer.appendChild(rowsContainerFixed);
+    timelineContainer.appendChild(rowsContainerScrollable);
     
     // Add zoom controls
     const controlsDiv = document.querySelector('.timeline-controls .btn-group');
@@ -485,46 +599,6 @@ async def index(request):
     zoomControls.style.cssText = 'position:static; gap:8px; margin-left:auto; display:flex; align-items:center;';
     zoomControls.innerHTML = '<button type="button" class="btn btn-secondary zoom-out">−</button><div class="zoom-level">Zoom: ' + initialZoomMultiplier + 'x</div><button type="button" class="btn btn-secondary zoom-in">+</button>';
     controlsDiv.appendChild(zoomControls);
-    
-    // Create rows container
-    const rowsContainer = document.createElement('div');
-    rowsContainer.className = 'timeline-rows-container';
-    
-    // Helper to create a timeline row for a guest or triggers
-    function createTimelineRow(label, rowData) {
-      const row = document.createElement('div');
-      row.className = 'timeline-row';
-      
-      const labelDiv = document.createElement('div');
-      labelDiv.className = 'timeline-row-label';
-      labelDiv.textContent = label;
-      row.appendChild(labelDiv);
-      
-      const contentDiv = document.createElement('div');
-      contentDiv.className = 'timeline-row-content';
-      contentDiv.style.minWidth = (Math.max(400, Math.round(totalSeconds * pps)) + 60) + 'px';
-      contentDiv.dataset.rowType = rowData.type;
-      contentDiv.dataset.rowId = rowData.id;
-      row.appendChild(contentDiv);
-      
-      return { row, contentDiv };
-    }
-    
-    // Create rows for each guest
-    const rowDivs = {};
-    GUESTS_LIST.forEach(function(guestId) {
-      const { row, contentDiv } = createTimelineRow('👤 Guest ' + guestId, { type: 'guest', id: guestId });
-      rowsContainer.appendChild(row);
-      rowDivs[guestId] = contentDiv;
-    });
-    
-    // Create row for triggers
-    const { row: triggerRow, contentDiv: triggerContent } = createTimelineRow('⚡ Triggers', { type: 'trigger', id: 'triggers' });
-    rowsContainer.appendChild(triggerRow);
-    rowDivs['triggers'] = triggerContent;
-    
-    timelineContainer.appendChild(rowsContainer);
-    document.getElementById('timeline-container-shared').appendChild(timelineContainer);
     
     // Place blocks in rows
     function placeBlock(block, startSec, rowContent) {
@@ -561,6 +635,92 @@ async def index(request):
       
       block.dataset.start = startSec;
       rowContent.appendChild(block);
+      
+      // Add drag handler
+      let isDragging = false;
+      let dragStartX = 0;
+      let dragStartLeft = 0;
+      block.addEventListener('mousedown', function(e) {
+        if (block.dataset.type === 'delay' && e.target.classList.contains('resize-handle')) {
+          // Resize mode
+          isDragging = 'resize';
+          dragStartX = e.clientX;
+          dragStartLeft = parseFloat(block.style.width);
+        } else {
+          // Drag mode
+          isDragging = 'drag';
+          dragStartX = e.clientX;
+          dragStartLeft = parseFloat(block.style.left);
+          block.style.cursor = 'grabbing';
+        }
+        e.preventDefault();
+      });
+      
+      document.addEventListener('mousemove', function(e) {
+        if (!isDragging) return;
+        const deltaX = e.clientX - dragStartX;
+        if (isDragging === 'drag') {
+          let newLeft = Math.max(0, dragStartLeft + deltaX);
+          
+          // Snap to nearby blocks
+          const snapDistance = 8; // pixels
+          const otherBlocks = Array.from(rowContent.querySelectorAll('.timeline-item')).filter(b => b !== block);
+          let snappedLeft = newLeft;
+          let minDistance = snapDistance;
+          
+          otherBlocks.forEach(function(otherBlock) {
+            const otherLeft = parseFloat(otherBlock.style.left);
+            const otherRight = otherLeft + parseFloat(otherBlock.style.width);
+            const blockWidth = parseFloat(block.style.width);
+            
+            // Snap to left edge of other block
+            const distToOtherLeft = Math.abs(newLeft - otherLeft);
+            if (distToOtherLeft < minDistance) {
+              minDistance = distToOtherLeft;
+              snappedLeft = otherLeft;
+            }
+            
+            // Snap to right edge of other block
+            const distToOtherRight = Math.abs(newLeft - otherRight);
+            if (distToOtherRight < minDistance) {
+              minDistance = distToOtherRight;
+              snappedLeft = otherRight;
+            }
+            
+            // Snap right edge to other block's left
+            const distRightToLeft = Math.abs((newLeft + blockWidth) - otherLeft);
+            if (distRightToLeft < minDistance) {
+              minDistance = distRightToLeft;
+              snappedLeft = otherLeft - blockWidth;
+            }
+            
+            // Snap right edge to other block's right
+            const distRightToRight = Math.abs((newLeft + blockWidth) - otherRight);
+            if (distRightToRight < minDistance) {
+              minDistance = distRightToRight;
+              snappedLeft = otherRight - blockWidth;
+            }
+          });
+          
+          newLeft = Math.max(0, snappedLeft);
+          block.style.left = newLeft + 'px';
+          block.dataset.start = pxToTime(newLeft, pps);
+        } else if (isDragging === 'resize') {
+          const newWidth = Math.max(40, dragStartLeft + deltaX);
+          block.style.width = newWidth + 'px';
+          block.dataset.duration = pxToTime(newWidth, pps);
+          block.dataset.seconds = pxToTime(newWidth, pps);
+          const meta = block.querySelector('.meta');
+          if (meta) meta.textContent = (pxToTime(newWidth, pps)).toFixed(1) + 's';
+        }
+      });
+      
+      document.addEventListener('mouseup', function() {
+        if (isDragging === 'drag') {
+          block.style.cursor = 'grab';
+        }
+        isDragging = false;
+      });
     }
     
     // Place all blocks
@@ -589,15 +749,63 @@ async def index(request):
       select.value = '';
     });
     
-    // Add delay button handler
-    document.querySelector('.add-delay-btn').addEventListener('click', function() {
-      // Determine which guest row to add delay to - currently adds to first guest
-      const firstGuestId = GUESTS_LIST[0];
-      if (!firstGuestId) { alert('No guest rows available'); return; }
-      
-      const block = createBlock({ type: 'delay', seconds: 3.0, duration: 3.0 });
-      const last = Array.from(rowDivs[firstGuestId].children).reduce((m, b) => Math.max(m, parseFloat(b.dataset.start || 0) + parseFloat(b.dataset.duration || 0)), 0);
-      placeBlock(block, last || 0, rowDivs[firstGuestId]);
+    // Add per-guest upload handlers
+    document.querySelectorAll('.upload-input-row').forEach(function(input) {
+      input.addEventListener('change', function() {
+        const guestId = this.dataset.guest;
+        if (this.files.length === 0) return;
+        
+        const formData = new FormData();
+        formData.append('guest_id', guestId);
+        for (let i = 0; i < this.files.length; i++) {
+          formData.append('file', this.files[i]);
+        }
+        
+        // Show upload overlay
+        const overlay = document.getElementById('uploadOverlay');
+        if (overlay) {
+          // Reset overlay to initial state
+          overlay.querySelector('.upload-message').innerHTML = '<div class="spinner"></div><h2>Please Wait</h2><p>Uploading and processing file...</p>';
+          overlay.classList.add('active');
+        }
+        
+        fetch('/upload', {
+          method: 'POST',
+          body: formData
+        }).then(response => response.json()).then(data => {
+          if (data.files) {
+            // Add uploaded files to the guest timeline
+            data.files.forEach(function(file) {
+              const block = createBlock({ type: 'track', track: file.filename, duration: file.duration || 0 });
+              const last = Array.from(rowDivs[guestId].children).reduce((m, b) => Math.max(m, parseFloat(b.dataset.start || 0) + parseFloat(b.dataset.duration || 0)), 0);
+              placeBlock(block, last || 0, rowDivs[guestId]);
+            });
+            // Show success message in overlay
+            if (overlay) {
+              const msgDiv = overlay.querySelector('.upload-message');
+              if (msgDiv) {
+                msgDiv.innerHTML = '<h2 style="color:#238636;">✓ Success!</h2><p>Files uploaded and added to timeline</p>';
+                setTimeout(() => {
+                  overlay.classList.remove('active');
+                }, 2000);
+              }
+            }
+          }
+        }).catch(err => {
+          if (overlay) {
+            const msgDiv = overlay.querySelector('.upload-message');
+            if (msgDiv) {
+              msgDiv.innerHTML = '<h2 style="color:#f85149;">✕ Upload Failed</h2><p>' + err + '</p>';
+              setTimeout(() => {
+                overlay.classList.remove('active');
+              }, 3000);
+            }
+          }
+        });
+        
+        // Reset file input
+        this.value = '';
+      });
     });
     
     // Update zoom controls
@@ -639,6 +847,13 @@ async def index(request):
     form.addEventListener('submit', function(e) {
       e.preventDefault();
       
+      // Show save overlay
+      const overlay = document.getElementById('uploadOverlay');
+      if (overlay) {
+        overlay.querySelector('.upload-message').innerHTML = '<div class="spinner"></div><h2>Please Wait</h2><p>Saving playlists...</p>';
+        overlay.classList.add('active');
+      }
+      
       // Collect all blocks from each row
       const allPlaylistsData = {};
       Object.keys(rowDivs).forEach(function(rowId) {
@@ -677,14 +892,30 @@ async def index(request):
         body: formData
       }).then(response => {
         if (response.ok) {
-          console.log('Playlists saved successfully');
-          alert('Playlists saved!');
+          const overlay = document.getElementById('uploadOverlay');
+          if (overlay) {
+            overlay.querySelector('.upload-message').innerHTML = '<h2 style="color:#238636;">✓ Success!</h2><p>Playlists saved!</p>';
+            setTimeout(() => {
+              overlay.classList.remove('active');
+            }, 2000);
+          }
         } else {
-          alert('Error saving playlists');
+          const overlay = document.getElementById('uploadOverlay');
+          if (overlay) {
+            overlay.querySelector('.upload-message').innerHTML = '<h2 style="color:#f85149;">✕ Error</h2><p>Failed to save playlists</p>';
+            setTimeout(() => {
+              overlay.classList.remove('active');
+            }, 3000);
+          }
         }
       }).catch(err => {
-        console.error('Error:', err);
-        alert('Error saving playlists: ' + err);
+        const overlay = document.getElementById('uploadOverlay');
+        if (overlay) {
+          overlay.querySelector('.upload-message').innerHTML = '<h2 style="color:#f85149;">✕ Error</h2><p>' + err + '</p>';
+          setTimeout(() => {
+            overlay.classList.remove('active');
+          }, 3000);
+        }
       });
     });
   });
@@ -753,105 +984,106 @@ async def ws_handler(request):
     return ws
 
 async def upload_handler(request):
-    reader = await request.multipart()
-    # First form field: guest ID
-    field = await reader.next()
-    guest_id = (await field.text()).strip()
-    # Process any number of file parts (support multi-file upload)
-    files_added = []
-    while True:
+    try:
+        reader = await request.multipart()
+        # First form field: guest ID
         field = await reader.next()
-        if field is None:
-            break
-        if field.name != 'file':
-            # skip unexpected fields
-            continue
-        # use original filename, replace spaces with underscores
-        original_fname = field.filename or 'track'
-        safe_fname = original_fname.replace(' ', '_')
-        # If MP3, convert to WAV; otherwise keep as is
-        if safe_fname.lower().endswith('.mp3'):
-            wav_fname = safe_fname.rsplit('.', 1)[0] + '.wav'
-        else:
-            wav_fname = safe_fname
-        
-        temp_path = AUDIO_DIR / safe_fname
-        final_path = AUDIO_DIR / wav_fname
-        
-        # Save uploaded file
-        with open(temp_path, 'wb') as f:
-            while True:
-                chunk = await field.read_chunk()
-                if not chunk:
-                    break
-                f.write(chunk)
-        
-        print(f"[{format_time(time.time())}] Uploaded {safe_fname} for guest {guest_id}")
-        
-        # Convert MP3 to WAV if necessary
-        if safe_fname.lower().endswith('.mp3'):
-            try:
-                print(f"[{format_time(time.time())}] Converting {safe_fname} to WAV...")
-                # Use ffmpeg to convert MP3 to WAV
-                result = subprocess.run(['ffmpeg', '-i', str(temp_path), '-acodec', 'pcm_s16le', '-ar', '44100', 
-                                       str(final_path), '-y'], capture_output=True, timeout=60)
-                if result.returncode == 0:
-                    temp_path.unlink()  # Delete original MP3
-                    print(f"[{format_time(time.time())}] Converted to {wav_fname}")
-                else:
-                    ffmpeg_error = result.stderr.decode('utf-8', errors='ignore') if result.stderr else 'Unknown error'
-                    print(f"[{format_time(time.time())}] FFmpeg error: {ffmpeg_error}")
-                    print(f"[{format_time(time.time())}] Conversion failed, keeping MP3")
+        guest_id = (await field.text()).strip()
+        # Process any number of file parts (support multi-file upload)
+        files_added = []
+        while True:
+            field = await reader.next()
+            if field is None:
+                break
+            if field.name != 'file':
+                # skip unexpected fields
+                continue
+            # use original filename, replace spaces with underscores
+            original_fname = field.filename or 'track'
+            safe_fname = original_fname.replace(' ', '_')
+            # If MP3, convert to WAV; otherwise keep as is
+            if safe_fname.lower().endswith('.mp3'):
+                wav_fname = safe_fname.rsplit('.', 1)[0] + '.wav'
+            else:
+                wav_fname = safe_fname
+            
+            temp_path = AUDIO_DIR / safe_fname
+            final_path = AUDIO_DIR / wav_fname
+            
+            # Save uploaded file
+            with open(temp_path, 'wb') as f:
+                while True:
+                    chunk = await field.read_chunk()
+                    if not chunk:
+                        break
+                    f.write(chunk)
+            
+            print(f"[{format_time(time.time())}] Uploaded {safe_fname} for guest {guest_id}")
+            
+            # Convert MP3 to WAV if necessary
+            if safe_fname.lower().endswith('.mp3'):
+                try:
+                    print(f"[{format_time(time.time())}] Converting {safe_fname} to WAV...")
+                    # Use ffmpeg to convert MP3 to WAV
+                    result = subprocess.run(['ffmpeg', '-i', str(temp_path), '-acodec', 'pcm_s16le', '-ar', '44100', 
+                                           str(final_path), '-y'], capture_output=True, timeout=60)
+                    if result.returncode == 0:
+                        temp_path.unlink()  # Delete original MP3
+                        print(f"[{format_time(time.time())}] Converted to {wav_fname}")
+                    else:
+                        ffmpeg_error = result.stderr.decode('utf-8', errors='ignore') if result.stderr else 'Unknown error'
+                        print(f"[{format_time(time.time())}] FFmpeg error: {ffmpeg_error}")
+                        print(f"[{format_time(time.time())}] Conversion failed, keeping MP3")
+                        final_path = temp_path
+                        wav_fname = safe_fname
+                except FileNotFoundError:
+                    print(f"[{format_time(time.time())}] ERROR: FFmpeg not found. Please install FFmpeg:")
+                    print(f"  Windows: Download from https://ffmpeg.org/download.html or use: choco install ffmpeg")
+                    print(f"  Linux: apt-get install ffmpeg")
+                    print(f"  Mac: brew install ffmpeg")
+                    print(f"  Keeping original MP3 file.")
                     final_path = temp_path
                     wav_fname = safe_fname
-            except FileNotFoundError:
-                print(f"[{format_time(time.time())}] ERROR: FFmpeg not found. Please install FFmpeg:")
-                print(f"  Windows: Download from https://ffmpeg.org/download.html or use: choco install ffmpeg")
-                print(f"  Linux: apt-get install ffmpeg")
-                print(f"  Mac: brew install ffmpeg")
-                print(f"  Keeping original MP3 file.")
-                final_path = temp_path
-                wav_fname = safe_fname
-            except Exception as e:
-                print(f"[{format_time(time.time())}] Conversion error: {e}, keeping original")
-                final_path = temp_path
-                wav_fname = safe_fname
-        
-        # add to guest playlist (track row followed by delay row)
-        PLAYLISTS.setdefault(guest_id, []).append({'type': 'track', 'track': wav_fname})
-        PLAYLISTS[guest_id].append({'type': 'delay', 'seconds': 0.0})
-        files_added.append({'filename': wav_fname, 'duration': get_track_duration(wav_fname)})
-        
-        # push file to client via SFTP if connected
-        ip = client_addrs.get(guest_id)
-        install_dir = client_paths.get(guest_id, '')
-        if ip and install_dir:
-            password = 'raspberry'
-            try:
-                ssh = paramiko.SSHClient()
-                ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-                ssh.connect(hostname=ip, username='pi', password=password)
-                sftp = ssh.open_sftp()
-                # Use forward slashes for remote Unix/Linux paths
-                audio_dir = install_dir.rstrip('/') + '/audio'
+                except Exception as e:
+                    print(f"[{format_time(time.time())}] Conversion error: {e}, keeping original")
+                    final_path = temp_path
+                    wav_fname = safe_fname
+            
+            # add to guest playlist (track row followed by delay row)
+            PLAYLISTS.setdefault(guest_id, []).append({'type': 'track', 'track': wav_fname})
+            PLAYLISTS[guest_id].append({'type': 'delay', 'seconds': 0.0})
+            files_added.append({'filename': wav_fname, 'duration': get_track_duration(wav_fname)})
+            
+            # push file to client via SFTP if connected
+            ip = client_addrs.get(guest_id)
+            install_dir = client_paths.get(guest_id, '')
+            if ip and install_dir:
+                password = 'raspberry'
                 try:
-                    sftp.mkdir(audio_dir)
-                except IOError:
-                    pass
-                remote_path = audio_dir.rstrip('/') + '/' + wav_fname
-                sftp.put(str(final_path), remote_path)
-                sftp.close()
-                ssh.close()
-                print(f"[{format_time(time.time())}] Pushed file to client {guest_id} at {ip}:{remote_path}")
-            except Exception as e:
-                print(f"Failed to push file to client {guest_id}: {e}")
-    # Return JSON for AJAX requests, include durations so the UI can size the timeline
-    sec_fetch = request.headers.get('Sec-Fetch-Mode')
-    xreq = request.headers.get('X-Requested-With', '')
-    accept = request.headers.get('Accept', '')
-    if 'application/json' in accept or xreq == 'XMLHttpRequest' or sec_fetch is not None:
+                    ssh = paramiko.SSHClient()
+                    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+                    ssh.connect(hostname=ip, username='pi', password=password)
+                    sftp = ssh.open_sftp()
+                    # Use forward slashes for remote Unix/Linux paths
+                    audio_dir = install_dir.rstrip('/') + '/audio'
+                    try:
+                        sftp.mkdir(audio_dir)
+                    except IOError:
+                        pass
+                    remote_path = audio_dir.rstrip('/') + '/' + wav_fname
+                    sftp.put(str(final_path), remote_path)
+                    sftp.close()
+                    ssh.close()
+                    print(f"[{format_time(time.time())}] Pushed file to client {guest_id} at {ip}:{remote_path}")
+                except Exception as e:
+                    print(f"Failed to push file to client {guest_id}: {e}")
+        # Return JSON for AJAX requests, include durations so the UI can size the timeline
         return web.json_response({'status': 'ok', 'files': files_added})
-    return web.HTTPFound('/')
+    except Exception as e:
+        print(f"[{format_time(time.time())}] Upload handler error: {e}")
+        import traceback
+        traceback.print_exc()
+        return web.json_response({'status': 'error', 'message': str(e)}, status=400)
 
 async def start_handler(request):
     await start_show()
